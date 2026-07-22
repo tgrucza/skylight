@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Users } from "lucide-react";
+import { Plus, Users, Trash2, Calendar as CalendarIcon, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Card } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
@@ -9,10 +9,14 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Label } from "@/components/ui/Input";
+import { LinkCalendarModal } from "@/components/family/LinkCalendarModal";
 import { MEMBER_COLORS } from "@/lib/colors";
 import { useFamily } from "@/hooks/useFamily";
+import { useDeleteMember } from "@/hooks/useFamilyMembers";
+import { useCalendarIntegrations, useUnlinkCalendar } from "@/hooks/useCalendarIntegrations";
 import { useUIStore } from "@/stores/uiStore";
 import { useQueryClient } from "@tanstack/react-query";
+import type { FamilyMemberDTO } from "@/hooks/useFamily";
 
 export default function FamilyPage() {
   const { data, isLoading } = useFamily();
@@ -26,7 +30,13 @@ export default function FamilyPage() {
   const [pin, setPin] = useState("");
   const [busy, setBusy] = useState(false);
 
+  const [removeTarget, setRemoveTarget] = useState<FamilyMemberDTO | null>(null);
+  const [linkCalendarOpen, setLinkCalendarOpen] = useState(false);
+
   const isAdult = data?.members.find((m) => m.id === data.currentMemberId)?.role === "adult";
+  const deleteMember = useDeleteMember(data?.family?.id);
+  const { data: integrations } = useCalendarIntegrations(data?.family?.id);
+  const unlinkCalendar = useUnlinkCalendar(data?.family?.id);
 
   async function handleAdd() {
     if (!name.trim() || !data?.family) return;
@@ -58,6 +68,17 @@ export default function FamilyPage() {
     }
   }
 
+  async function handleRemove() {
+    if (!removeTarget) return;
+    try {
+      await deleteMember.mutateAsync(removeTarget.id);
+      pushToast(`${removeTarget.name} removed from the family`, "info");
+      setRemoveTarget(null);
+    } catch (err) {
+      pushToast(err instanceof Error ? err.message : "Couldn't remove member", "danger");
+    }
+  }
+
   if (isLoading) return <Skeleton rows={4} />;
 
   return (
@@ -73,13 +94,59 @@ export default function FamilyPage() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
-        {(data?.members ?? []).map((m) => (
-          <Card key={m.id} className="flex flex-col items-center text-center gap-2.5">
-            <Avatar name={m.name} color={m.color_hex} size={56} />
-            <div className="font-bold text-sm">{m.name}</div>
-            <Badge tone={m.role === "adult" ? "info" : "neutral"}>{m.role === "adult" ? "Adult" : "Child"}</Badge>
-          </Card>
-        ))}
+        {(data?.members ?? []).map((m) => {
+          const isSelf = m.id === data?.currentMemberId;
+          const memberIntegrations = (integrations ?? []).filter((i) => i.member_id === m.id);
+
+          return (
+            <Card key={m.id} className="flex flex-col items-center text-center gap-2.5 relative">
+              {isAdult && !isSelf && (
+                <button
+                  type="button"
+                  onClick={() => setRemoveTarget(m)}
+                  aria-label={`Remove ${m.name}`}
+                  className="absolute top-3 right-3 text-ink-3 hover:text-danger cursor-pointer"
+                >
+                  <Trash2 className="size-4" />
+                </button>
+              )}
+              <Avatar name={m.name} color={m.color_hex} size={56} />
+              <div className="font-bold text-sm">{m.name}</div>
+              <Badge tone={m.role === "adult" ? "info" : "neutral"}>{m.role === "adult" ? "Adult" : "Child"}</Badge>
+
+              {m.role === "adult" && (
+                <div className="w-full pt-2 border-t border-line mt-1 flex flex-col gap-1.5">
+                  {memberIntegrations.length === 0 ? (
+                    <span className="text-xs text-ink-3">No calendar linked</span>
+                  ) : (
+                    memberIntegrations.map((integ) => (
+                      <div key={integ.id} className="flex items-center gap-1.5 text-xs text-ink-2 justify-center">
+                        <CalendarIcon className="size-3" />
+                        <span className="truncate max-w-[110px]">{integ.google_calendar_id}</span>
+                        {isSelf && (
+                          <button
+                            type="button"
+                            onClick={() => unlinkCalendar.mutate(integ.id)}
+                            aria-label="Unlink calendar"
+                            className="text-ink-3 hover:text-danger cursor-pointer shrink-0"
+                          >
+                            <X className="size-3" />
+                          </button>
+                        )}
+                      </div>
+                    ))
+                  )}
+                  {isSelf && (
+                    <Button variant="ghost" size="sm" onClick={() => setLinkCalendarOpen(true)} className="gap-1.5 !text-xs !h-8 mt-1">
+                      <CalendarIcon className="size-3.5" />
+                      {memberIntegrations.length > 0 ? "Link another" : "Link Google Calendar"}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </Card>
+          );
+        })}
       </div>
 
       <Modal
@@ -147,6 +214,37 @@ export default function FamilyPage() {
           )}
         </div>
       </Modal>
+
+      <Modal
+        open={!!removeTarget}
+        onClose={() => setRemoveTarget(null)}
+        icon={Trash2}
+        title={`Remove ${removeTarget?.name ?? "this member"}?`}
+        subtitle="Their chore history, list additions, and photos stay — just no longer attributed to them."
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setRemoveTarget(null)} disabled={deleteMember.isPending}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleRemove} loading={deleteMember.isPending}>
+              Remove
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-ink-2">
+          {removeTarget?.name} will lose access to Hearth and their linked calendar (if any) will be unlinked.
+        </p>
+      </Modal>
+
+      {data?.family && (
+        <LinkCalendarModal
+          open={linkCalendarOpen}
+          onClose={() => setLinkCalendarOpen(false)}
+          familyId={data.family.id}
+          memberId={data.currentMemberId}
+        />
+      )}
     </div>
   );
 }
