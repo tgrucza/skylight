@@ -14,6 +14,10 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt" },
   secret: process.env.AUTH_SECRET,
+  // Vercel auto-trusts its own host; any other platform (Netlify included)
+  // needs this explicitly or Auth.js refuses the request as a potential
+  // host-header injection ("There is a problem with the server configuration").
+  trustHost: true,
   providers: [
     Google({
       clientId: process.env.AUTH_GOOGLE_ID!,
