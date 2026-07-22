@@ -1,26 +1,285 @@
 @import "tailwindcss";
 
+/*
+ * Hearth Design System — tokens
+ * Source of truth: design_docs/Hearth Design System.dc.html + Home Hub.dc.html
+ * Tailwind v4 CSS-first theme: every custom property below is picked up as a
+ * utility by the @theme block further down. Never hardcode a hex/px value in
+ * component code — add or reuse a token here instead (see §7.3 of the spec).
+ */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* ---- Neutrals — warm paper scale (hearth theme, default & only shipped theme) ---- */
+  --paper: #f5f1ea;
+  --surface: #fcfaf6;
+  --surface-2: #efe9df;
+  --ink: #2b2723;
+  --ink-2: #6c6358;
+  --ink-3: #9c9388;
+  --line: #e7e0d5;
+
+  /* ---- Accent & semantic ---- */
+  --primary: #bf6544;
+  --primary-soft: #f3e1d6;
+  --primary-ink: #ffffff;
+  --secondary: #7b8b6a;
+  --secondary-soft: #e7ebdf;
+  --success: #5c8a5a;
+  --success-soft: #e4eee0;
+  --warning: #c08a2e;
+  --warning-soft: #f5e9cf;
+  --danger: #c0524a;
+  --danger-soft: #f5ded9;
+  --info: #5e7c99;
+  --info-soft: #e1e9ef;
+
+  /* ---- Radii ---- */
+  --radius-2xs: 6px;
+  --radius-xs: 8px;
+  --radius-sm: 10px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 18px;
+  --radius-2xl: 22px;
+  --radius-3xl: 24px;
+  --radius-pill: 999px;
+
+  /* ---- Elevation ---- */
+  --shadow-e1: 0 1px 2px rgba(43, 39, 35, 0.06);
+  --shadow-e2: 0 2px 8px rgba(43, 39, 35, 0.07), 0 1px 2px rgba(43, 39, 35, 0.05);
+  --shadow-e3: 0 8px 24px rgba(43, 39, 35, 0.1), 0 2px 6px rgba(43, 39, 35, 0.05);
+  --shadow-e4: 0 24px 60px rgba(43, 39, 35, 0.18), 0 6px 16px rgba(43, 39, 35, 0.08);
+  --shadow-modal: 0 30px 80px rgba(43, 39, 35, 0.3);
+  --shadow-toast: 0 18px 48px rgba(43, 39, 35, 0.3);
+  --shadow-dropdown: 0 18px 48px rgba(43, 39, 35, 0.14);
+
+  /* ---- Motion ---- */
+  --ease-hearth: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --duration-micro: 120ms;
+  --duration-standard: 180ms;
+  --duration-entrance: 240ms;
+}
+
+/* Ambient / warm-dark state — applied to /hub during idle mode and the
+   evening ambient_start–ambient_end window. Scoped via [data-theme="ambient"]
+   rather than prefers-color-scheme: this is a product feature (a calm night
+   mode for an always-on kitchen display), not a system dark-mode mirror. */
+[data-theme="ambient"] {
+  --paper: #1c1916;
+  --surface: #26221d;
+  --surface-2: #332e27;
+  --ink: #f3ece0;
+  --ink-2: #b9ae9c;
+  --ink-3: #8a8071;
+  --line: #3a342c;
+  --primary: #c97a52;
+  --primary-soft: #3a2c22;
+  --primary-ink: #1c1916;
+  --secondary: #94a47f;
+  --secondary-soft: #2c3327;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-line: var(--line);
+
+  --color-primary: var(--primary);
+  --color-primary-soft: var(--primary-soft);
+  --color-primary-ink: var(--primary-ink);
+  --color-secondary: var(--secondary);
+  --color-secondary-soft: var(--secondary-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  --radius-2xs: var(--radius-2xs);
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+  --radius-3xl: var(--radius-3xl);
+  --radius-pill: var(--radius-pill);
+
+  --shadow-e1: var(--shadow-e1);
+  --shadow-e2: var(--shadow-e2);
+  --shadow-e3: var(--shadow-e3);
+  --shadow-e4: var(--shadow-e4);
+  --shadow-modal: var(--shadow-modal);
+  --shadow-toast: var(--shadow-toast);
+  --shadow-dropdown: var(--shadow-dropdown);
+
+  --font-serif: var(--font-newsreader), "Newsreader", serif;
+  --font-sans: var(--font-hanken), "Hanken Grotesk", system-ui, sans-serif;
+  --font-mono: var(--font-jetbrains), "JetBrains Mono", monospace;
+
+  /* Type scale — literal rendered values from the design doc (see extraction
+     notes: the doc's descriptive labels like "88/1.0" refer to the separate
+     hero/masthead clamp() sizes below, not these token sizes). */
+  --text-display: 42px;
+  --text-display--line-height: 1;
+  --text-display--letter-spacing: -0.02em;
+  --text-display--font-weight: 400;
+
+  --text-h1: 30px;
+  --text-h1--line-height: 1.1;
+  --text-h1--font-weight: 400;
+
+  --text-h2: 22px;
+  --text-h2--line-height: 1.2;
+  --text-h2--font-weight: 700;
+
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 1.5;
+  --text-body-lg--font-weight: 500;
+
+  --text-body: 16px;
+  --text-body--line-height: 1.55;
+  --text-body--font-weight: 400;
+
+  --text-label: 13px;
+  --text-label--line-height: 1.4;
+  --text-label--font-weight: 600;
+
+  --text-micro: 12px;
+  --text-micro--line-height: 1.4;
+  --text-micro--font-weight: 500;
+  --text-micro--letter-spacing: 0.06em;
+
+  --animate-spin-slow: hs-spin 1s linear infinite;
+  --animate-pulse-soft: hs-pulse 2.4s ease-in-out infinite;
+  --animate-shimmer: hs-shimmer 1.4s infinite;
+  --animate-toast-in: hs-toast var(--duration-entrance) var(--ease-hearth);
+  --animate-fade-up: hs-fadeup var(--duration-standard) ease;
+  --animate-now: hs-now 2.4s ease-in-out infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@keyframes hs-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes hs-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.45;
+  }
+}
+@keyframes hs-shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+@keyframes hs-toast {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes hs-fadeup {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes hs-now {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+@keyframes hh-pan {
+  0% {
+    transform: scale(1.06) translate(0, 0);
+  }
+  100% {
+    transform: scale(1.14) translate(-1.5%, -1%);
+  }
+}
+@keyframes hh-dot {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes hh-hint {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 0.85;
   }
 }
 
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(191, 101, 68, 0.18);
+}
+
+a {
+  color: var(--primary);
+}
+
+:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }

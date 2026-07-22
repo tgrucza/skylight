@@ -1,36 +1,31 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Hearth — Family Command Center
 
-## Getting Started
+The calm center of a busy home: shared calendar (two-way Google sync), chores with star rewards, meal planning, grocery/checklists, photos, and a wall-mounted "Home Hub" dashboard with an idle/ambient photo-frame mode.
 
-First, run the development server:
+Built to `HEARTH_ENGINEERING_SPEC.md` and the accompanying design docs. Next.js 15 (App Router) + TypeScript strict + Tailwind v4 + Supabase (Postgres/RLS/Realtime/Storage) + Auth.js v5 + Google Calendar API.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+## Getting started
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+1. Copy `.env.local.example` to `.env.local` and fill it in — see [DEPLOYMENT.md](DEPLOYMENT.md) for where each value comes from (Supabase project, Google Cloud OAuth client, generated secrets).
+2. Run the two SQL files in `supabase/` (`schema.sql`, `policies.sql`, `storage.sql`) against your Supabase project.
+3. `npm install`
+4. `npm run dev` → http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Project structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `src/app/` — routes: `(auth)/signin`, `(setup)/onboarding`, `(app)/hub` (wall dashboard, no chrome), `(app)/(shell)/*` (calendar/chores/meals/lists/photos/family/settings, with Rail/TopBar/BottomNav), `api/*` (Google sync, onboarding, events, cron)
+- `src/components/ui/` — design-system primitives (Button, Card, Modal, Toast, …) — one of each, variants via props
+- `src/components/{hub,calendar,chores,meals,lists,photos,layout}/` — feature components
+- `src/lib/` — `google/` (OAuth, sync engine, watch channels, token encryption), `supabase/` (RLS-scoped + admin clients, the Auth.js↔Supabase JWT bridge), `rrule.ts`, `dates.ts` (timezone-safe date math)
+- `src/hooks/` — TanStack Query hooks per feature, plus `useSupabaseClient`, `useIdle`, `useWakeLock`
+- `supabase/` — schema, RLS policies, storage bucket policies
 
-## Learn More
+## Commands
 
-To learn more about Next.js, take a look at the following resources:
+- `npm run dev` — dev server
+- `npm run build` — production build (also type-checks + lints; run this before considering any change done)
+- `npm run lint`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Deploying
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See [DEPLOYMENT.md](DEPLOYMENT.md).

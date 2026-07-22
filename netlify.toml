@@ -1,0 +1,10 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+  functions = "netlify/functions"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+# Vercel Cron (vercel.json) is replaced by the two scheduled functions in
+# netlify/functions/ — see DEPLOYMENT.md for the Netlify path.

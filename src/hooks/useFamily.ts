@@ -1,0 +1,39 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+
+export interface FamilyMemberDTO {
+  id: string;
+  name: string;
+  role: "adult" | "child";
+  color_hex: string;
+  avatar_url: string | null;
+  sort_order: number;
+}
+
+export interface FamilySettingsDTO {
+  family_id: string;
+  idle_timeout_seconds: number;
+  ambient_start: string | null;
+  ambient_end: string | null;
+  slideshow_interval_seconds: number;
+  week_starts_on: number;
+  default_hub_view: "busy" | "calm";
+}
+
+interface FamilyResponse {
+  family: { id: string; name: string; timezone: string; theme: string } | null;
+  members: FamilyMemberDTO[];
+  currentMemberId: string;
+  settings: FamilySettingsDTO | null;
+}
+
+async function fetchFamily(): Promise<FamilyResponse> {
+  const res = await fetch("/api/family");
+  if (!res.ok) throw new Error("Failed to load family");
+  return res.json();
+}
+
+export function useFamily() {
+  return useQuery({ queryKey: ["family"], queryFn: fetchFamily, staleTime: 5 * 60_000 });
+}
