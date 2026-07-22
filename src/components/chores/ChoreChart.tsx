@@ -3,6 +3,7 @@
 import { Check, Pencil } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/Avatar";
+import { useAvatarUrls } from "@/hooks/useAvatarUrls";
 import type { FamilyMemberDTO } from "@/hooks/useFamily";
 import type { ChoreDTO, ChoreCompletionDTO } from "@/hooks/useChores";
 
@@ -19,6 +20,7 @@ interface ChoreChartProps {
 
 /** Today's chore chart, grouped by assigned member — tap a chip to complete (spec §6.6). */
 export function ChoreChart({ chores, members, completions, todayIso, activeMemberId, isAdult, onToggle, onEdit }: ChoreChartProps) {
+  const { data: avatarUrls } = useAvatarUrls(members);
   const todayDow = new Date(todayIso).getDay();
   const dueToday = chores.filter((c) => c.schedule_days.length === 0 || c.schedule_days.includes(todayDow));
 
@@ -38,7 +40,7 @@ export function ChoreChart({ chores, members, completions, todayIso, activeMembe
       {byMember.map(({ member, chores: memberChores }) => (
         <div key={member.id} className="rounded-xl border border-line bg-surface p-5">
           <div className="flex items-center gap-2.5 mb-3.5">
-            <Avatar name={member.name} color={member.color_hex} size={32} />
+            <Avatar name={member.name} color={member.color_hex} src={avatarUrls?.[member.id]} size={32} />
             <span className="font-bold text-[15px]">{member.name}</span>
           </div>
           <div className="flex flex-wrap gap-2.5">

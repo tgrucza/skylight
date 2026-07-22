@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { notFound } from "next/navigation";
 import { Bell, Plus, MapPin, Calendar as CalendarIcon, UtensilsCrossed } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Chip } from "@/components/ui/Chip";
@@ -34,6 +35,8 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 export default function StyleGuidePage() {
+  if (process.env.NODE_ENV === "production") notFound();
+
   const [modalOpen, setModalOpen] = useState(false);
   const [toggled, setToggled] = useState(true);
   const [checked, setChecked] = useState(true);

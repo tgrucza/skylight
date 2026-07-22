@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Modal } from "@/components/ui/Modal";
 import { Avatar } from "@/components/ui/Avatar";
+import { useAvatarUrls } from "@/hooks/useAvatarUrls";
 import { PinPad } from "./PinPad";
 import { useWallProfileStore } from "@/stores/wallProfileStore";
 import { cn } from "@/lib/cn";
@@ -11,6 +12,7 @@ import type { FamilyMemberDTO } from "@/hooks/useFamily";
 
 /** Row of member avatars — tap to become the "active" profile on this device. Kids need their PIN; adults switch instantly since they're already authenticated. */
 export function ProfileSwitcher({ members, currentUserMemberId }: { members: FamilyMemberDTO[]; currentUserMemberId: string }) {
+  const { data: avatarUrls } = useAvatarUrls(members);
   const activeMemberId = useWallProfileStore((s) => s.activeMemberId) ?? currentUserMemberId;
   const setActiveMember = useWallProfileStore((s) => s.setActiveMember);
   const [pinTarget, setPinTarget] = useState<FamilyMemberDTO | null>(null);
@@ -53,7 +55,7 @@ export function ProfileSwitcher({ members, currentUserMemberId }: { members: Fam
       <div className="flex flex-wrap gap-2.5">
         {members.map((m) => (
           <button key={m.id} type="button" onClick={() => select(m)} className="cursor-pointer flex flex-col items-center gap-1.5">
-            <Avatar name={m.name} color={m.color_hex} size={48} ring={activeMemberId === m.id ? "select" : "none"} />
+            <Avatar name={m.name} color={m.color_hex} src={avatarUrls?.[m.id]} size={48} ring={activeMemberId === m.id ? "select" : "none"} />
             <span className={cn("text-xs font-semibold", activeMemberId === m.id ? "text-ink" : "text-ink-3")}>{m.name}</span>
           </button>
         ))}

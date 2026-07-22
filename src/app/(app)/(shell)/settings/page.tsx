@@ -1,13 +1,67 @@
 "use client";
 
 import { useState } from "react";
+import { LogOut } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Input, Label } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Button } from "@/components/ui/Button";
 import { useFamily, type FamilySettingsDTO } from "@/hooks/useFamily";
-import { useUpdateSettings } from "@/hooks/useSettings";
+import { useUpdateSettings, useUpdateFamily } from "@/hooks/useSettings";
 import { useUIStore } from "@/stores/uiStore";
+import { COMMON_TIMEZONES } from "@/lib/timezones";
+import { signOutAction } from "@/lib/actions/auth";
+
+function FamilyCard({ familyId, name, timezone }: { familyId: string; name: string; timezone: string }) {
+  const [familyName, setFamilyName] = useState(name);
+  const [tz, setTz] = useState(timezone);
+  const updateFamily = useUpdateFamily(familyId);
+  const pushToast = useUIStore((s) => s.pushToast);
+
+  async function handleSave() {
+    if (!familyName.trim()) {
+      pushToast("Family name can't be empty", "danger");
+      return;
+    }
+    try {
+      await updateFamily.mutateAsync({ name: familyName.trim(), timezone: tz });
+      pushToast("Family updated", "success");
+    } catch (err) {
+      pushToast(err instanceof Error ? err.message : "Couldn't save changes", "danger");
+    }
+  }
+
+  return (
+    <div className="rounded-xl border border-line bg-surface p-6 flex flex-col gap-4">
+      <h2 className="font-bold text-sm">Family</h2>
+      <div>
+        <Label htmlFor="family-name">Family name</Label>
+        <Input id="family-name" value={familyName} onChange={(e) => setFamilyName(e.target.value)} />
+      </div>
+      <Select
+        label="Timezone"
+        value={tz}
+        onChange={setTz}
+        options={COMMON_TIMEZONES.map((t) => ({ value: t.value, label: t.label }))}
+      />
+      <Button onClick={handleSave} loading={updateFamily.isPending} className="self-start">
+        Save
+      </Button>
+    </div>
+  );
+}
+
+function AccountCard() {
+  return (
+    <div className="rounded-xl border border-line bg-surface p-6 flex flex-col gap-4">
+      <h2 className="font-bold text-sm">Account</h2>
+      <Button variant="outline" onClick={() => void signOutAction()} className="gap-2 self-start !text-danger">
+        <LogOut className="size-4" />
+        Sign out
+      </Button>
+    </div>
+  );
+}
 
 const DEFAULT_SETTINGS: Omit<FamilySettingsDTO, "family_id"> = {
   idle_timeout_seconds: 15,
@@ -96,6 +150,7 @@ function SettingsForm({ familyId, settings }: { familyId: string; settings: Fami
 
 export default function SettingsPage() {
   const { data, isLoading } = useFamily();
+  const isAdult = data?.members.find((m) => m.id === data.currentMemberId)?.role === "adult";
 
   return (
     <div className="flex flex-col gap-5 max-w-lg">
@@ -103,7 +158,11 @@ export default function SettingsPage() {
       {isLoading || !data?.family ? (
         <Skeleton rows={4} />
       ) : (
-        <SettingsForm key={`${data.family.id}-${data.settings?.idle_timeout_seconds ?? "d"}`} familyId={data.family.id} settings={data.settings} />
+        <>
+          <SettingsForm key={`${data.family.id}-${data.settings?.idle_timeout_seconds ?? "d"}`} familyId={data.family.id} settings={data.settings} />
+          {isAdult && <FamilyCard familyId={data.family.id} name={data.family.name} timezone={data.family.timezone} />}
+          <AccountCard />
+        </>
       )}
     </div>
   );

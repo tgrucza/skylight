@@ -5,6 +5,7 @@ import { Home, Calendar as CalendarIcon, CheckCircle2, UtensilsCrossed, Shopping
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AvatarStack } from "@/components/ui/Avatar";
+import { AccountMenu } from "@/components/layout/AccountMenu";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { ClockBlock } from "@/components/hub/ClockBlock";
 import { TodayTimeline } from "@/components/hub/TodayTimeline";
@@ -16,6 +17,7 @@ import { IdleScreen } from "@/components/hub/IdleScreen";
 import { QuickAddItemModal } from "@/components/hub/QuickAddItemModal";
 import { EventEditor } from "@/components/calendar/EventEditor";
 import { useFamily } from "@/hooks/useFamily";
+import { useAvatarUrls } from "@/hooks/useAvatarUrls";
 import { useEvents } from "@/hooks/useEvents";
 import { useChoresToday, useMealsToday, useGroceryPreview, useSlideshowPhotos } from "@/hooks/useHubWidgets";
 import { useIdle } from "@/hooks/useIdle";
@@ -53,6 +55,7 @@ export default function HubPage() {
   const { start, end } = useMemo(() => dayRange(now, timezone), [now, timezone]);
   const todayIso = useMemo(() => start.toISOString().slice(0, 10), [start]);
 
+  const { data: avatarUrls } = useAvatarUrls(members);
   const { data: events } = useEvents(start, end);
   const { data: chores } = useChoresToday(family?.id, todayIso);
   const { data: meals } = useMealsToday(family?.id, todayIso);
@@ -103,7 +106,7 @@ export default function HubPage() {
         <div className="ml-auto flex items-center gap-3">
           {members.length > 0 && (
             <div className="flex items-center gap-2">
-              <AvatarStack members={members.map((m) => ({ id: m.id, name: m.name, color: m.color_hex }))} />
+              <AvatarStack members={members.map((m) => ({ id: m.id, name: m.name, color: m.color_hex, src: avatarUrls?.[m.id] }))} />
               <span className="text-[11px] text-ink-2 max-w-[160px] truncate hidden md:inline">{statusLine}</span>
             </div>
           )}
@@ -120,6 +123,9 @@ export default function HubPage() {
                 <item.icon className="size-[18px]" />
               </Link>
             ))}
+            <div className="flex items-center justify-center pl-0.5">
+              <AccountMenu size={28} />
+            </div>
           </nav>
         </div>
       </header>

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { TitleInput, Input, Label } from "@/components/ui/Input";
 import { Toggle } from "@/components/ui/Toggle";
 import { Avatar } from "@/components/ui/Avatar";
+import { useAvatarUrls } from "@/hooks/useAvatarUrls";
 import { RecurrencePicker } from "./RecurrencePicker";
 import { useCreateEvent, useUpdateEvent, useDeleteEvent } from "@/hooks/useEvents";
 import { useUIStore } from "@/stores/uiStore";
@@ -92,6 +93,7 @@ export function EventEditor({ open, onClose, members, timezone, initialDate, eve
   const setLocation = (v: string) => setForm((f) => ({ ...f, location: v }));
   const setRrule = (v: string | null) => setForm((f) => ({ ...f, rrule: v }));
 
+  const { data: avatarUrls } = useAvatarUrls(members);
   const pushToast = useUIStore((s) => s.pushToast);
   const createEvent = useCreateEvent();
   const updateEvent = useUpdateEvent();
@@ -168,7 +170,7 @@ export function EventEditor({ open, onClose, members, timezone, initialDate, eve
           <div className="flex flex-wrap gap-2.5">
             {members.map((m) => (
               <button key={m.id} type="button" onClick={() => setMemberId(m.id)} className="cursor-pointer">
-                <Avatar name={m.name} color={m.color_hex} size={34} ring={memberId === m.id ? "select" : "none"} />
+                <Avatar name={m.name} color={m.color_hex} src={avatarUrls?.[m.id]} size={34} ring={memberId === m.id ? "select" : "none"} />
               </button>
             ))}
           </div>

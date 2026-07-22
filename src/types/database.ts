@@ -50,6 +50,8 @@ export interface Database {
           color_hex: string;
           avatar_url: string | null;
           pin_hash: string | null;
+          invite_email: string | null;
+          birthday: string | null;
           sort_order: number;
           created_at: string;
           updated_at: string;
@@ -264,10 +266,47 @@ export interface Database {
           slideshow_interval_seconds: number;
           week_starts_on: number;
           default_hub_view: HubView;
+          import_token: string | null;
+          latitude: number | null;
+          longitude: number | null;
           updated_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["settings"]["Row"]> & { family_id: string };
         Update: Partial<Database["public"]["Tables"]["settings"]["Row"]>;
+        Relationships: [];
+      };
+      integration_settings: {
+        Row: {
+          family_id: string;
+          ai_provider: "anthropic" | "openai" | null;
+          ai_api_key_enc: string | null;
+          ha_base_url: string | null;
+          ha_token_enc: string | null;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["integration_settings"]["Row"]> & { family_id: string };
+        Update: Partial<Database["public"]["Tables"]["integration_settings"]["Row"]>;
+        Relationships: [];
+      };
+      ha_buttons: {
+        Row: {
+          id: string;
+          family_id: string;
+          label: string;
+          icon: string;
+          entity_id: string;
+          service: string;
+          sort_order: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["ha_buttons"]["Row"]> & {
+          family_id: string;
+          label: string;
+          entity_id: string;
+          service: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["ha_buttons"]["Row"]>;
         Relationships: [];
       };
     };

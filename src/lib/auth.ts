@@ -12,7 +12,8 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
  * auth and calendar-link are one flow (spec §2.2).
  */
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  session: { strategy: "jwt" },
+  // One-year rolling session: the wall tablet must never log itself out.
+  session: { strategy: "jwt", maxAge: 60 * 60 * 24 * 365, updateAge: 60 * 60 * 24 },
   secret: process.env.AUTH_SECRET,
   // Vercel auto-trusts its own host; any other platform (Netlify included)
   // needs this explicitly or Auth.js refuses the request as a potential

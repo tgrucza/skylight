@@ -122,7 +122,8 @@ export async function syncIntegration(integration: Integration): Promise<SyncRes
   let cancelled = 0;
 
   if (masters.length > 0) {
-    await supabase.from("events").upsert(masters, { onConflict: "integration_id,google_event_id" });
+    const { error } = await supabase.from("events").upsert(masters, { onConflict: "integration_id,google_event_id" });
+    if (error) throw new Error(`events upsert failed: ${error.message}`);
     cancelled += masters.filter((m) => m.deleted_at).length;
   }
 
@@ -134,9 +135,10 @@ export async function syncIntegration(integration: Integration): Promise<SyncRes
       .eq("google_event_id", recurringEventId)
       .maybeSingle();
 
-    await supabase
+    const { error } = await supabase
       .from("events")
       .upsert({ ...row, recurrence_parent_id: parent?.id ?? null }, { onConflict: "integration_id,google_event_id" });
+    if (error) throw new Error(`events upsert (exception) failed: ${error.message}`);
     if (row.deleted_at) cancelled += 1;
   }
 

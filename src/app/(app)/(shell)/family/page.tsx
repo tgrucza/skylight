@@ -10,9 +10,11 @@ import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Label } from "@/components/ui/Input";
 import { LinkCalendarModal } from "@/components/family/LinkCalendarModal";
+import { EditMemberModal } from "@/components/family/EditMemberModal";
 import { MEMBER_COLORS } from "@/lib/colors";
 import { useFamily } from "@/hooks/useFamily";
 import { useDeleteMember } from "@/hooks/useFamilyMembers";
+import { useAvatarUrls } from "@/hooks/useAvatarUrls";
 import { useCalendarIntegrations, useUnlinkCalendar } from "@/hooks/useCalendarIntegrations";
 import { useUIStore } from "@/stores/uiStore";
 import { useQueryClient } from "@tanstack/react-query";
@@ -28,15 +30,18 @@ export default function FamilyPage() {
   const [role, setRole] = useState<"adult" | "child">("child");
   const [colorHex, setColorHex] = useState<string>(MEMBER_COLORS[0].hex);
   const [pin, setPin] = useState("");
+  const [inviteEmail, setInviteEmail] = useState("");
   const [busy, setBusy] = useState(false);
 
   const [removeTarget, setRemoveTarget] = useState<FamilyMemberDTO | null>(null);
   const [linkCalendarOpen, setLinkCalendarOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<FamilyMemberDTO | null>(null);
 
   const isAdult = data?.members.find((m) => m.id === data.currentMemberId)?.role === "adult";
   const deleteMember = useDeleteMember(data?.family?.id);
   const { data: integrations } = useCalendarIntegrations(data?.family?.id);
   const unlinkCalendar = useUnlinkCalendar(data?.family?.id);
+  const { data: avatarUrls } = useAvatarUrls(data?.members);
 
   async function handleAdd() {
     if (!name.trim() || !data?.family) return;
@@ -51,7 +56,15 @@ export default function FamilyPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           familyId: data.family.id,
-          members: [{ name: name.trim(), role, colorHex, pin: role === "child" && pin ? pin : undefined }],
+          members: [
+            {
+              name: name.trim(),
+              role,
+              colorHex,
+              pin: role === "child" && pin ? pin : undefined,
+              inviteEmail: role === "adult" && inviteEmail.trim() ? inviteEmail.trim().toLowerCase() : undefined,
+            },
+          ],
         }),
       });
       const body = await res.json();
@@ -61,6 +74,7 @@ export default function FamilyPage() {
       setModalOpen(false);
       setName("");
       setPin("");
+      setInviteEmail("");
     } catch (err) {
       pushToast(err instanceof Error ? err.message : "Couldn't add member", "danger");
     } finally {
@@ -99,23 +113,33 @@ export default function FamilyPage() {
           const memberIntegrations = (integrations ?? []).filter((i) => i.member_id === m.id);
 
           return (
-            <Card key={m.id} className="flex flex-col items-center text-center gap-2.5 relative">
+            <Card
+              key={m.id}
+              className={`flex flex-col items-center text-center gap-2.5 relative ${isAdult ? "cursor-pointer" : ""}`}
+              onClick={isAdult ? () => setEditTarget(m) : undefined}
+            >
               {isAdult && !isSelf && (
                 <button
                   type="button"
-                  onClick={() => setRemoveTarget(m)}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRemoveTarget(m);
+                  }}
                   aria-label={`Remove ${m.name}`}
                   className="absolute top-3 right-3 text-ink-3 hover:text-danger cursor-pointer"
                 >
                   <Trash2 className="size-4" />
                 </button>
               )}
-              <Avatar name={m.name} color={m.color_hex} size={56} />
+              <Avatar name={m.name} color={m.color_hex} src={avatarUrls?.[m.id]} size={56} />
               <div className="font-bold text-sm">{m.name}</div>
               <Badge tone={m.role === "adult" ? "info" : "neutral"}>{m.role === "adult" ? "Adult" : "Child"}</Badge>
 
               {m.role === "adult" && (
-                <div className="w-full pt-2 border-t border-line mt-1 flex flex-col gap-1.5">
+                <div
+                  className="w-full pt-2 border-t border-line mt-1 flex flex-col gap-1.5"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {memberIntegrations.length === 0 ? (
                     <span className="text-xs text-ink-3">No calendar linked</span>
                   ) : (
@@ -212,8 +236,28 @@ export default function FamilyPage() {
               />
             </div>
           )}
+          {role === "adult" && (
+            <div>
+              <Label htmlFor="member-invite">Their Google email (optional — links them in when they sign in)</Label>
+              <Input
+                id="member-invite"
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="name@gmail.com"
+              />
+            </div>
+          )}
         </div>
       </Modal>
+
+      <EditMemberModal
+        open={!!editTarget}
+        onClose={() => setEditTarget(null)}
+        familyId={data?.family?.id}
+        member={editTarget}
+        isSelf={editTarget?.id === data?.currentMemberId}
+      />
 
       <Modal
         open={!!removeTarget}

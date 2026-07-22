@@ -54,7 +54,12 @@ export async function POST(req: NextRequest) {
   // unlike a bare fire-and-forget promise which Vercel may freeze early.
   const integrations = data ?? [];
   after(async () => {
-    await Promise.allSettled(integrations.flatMap((integration) => [syncIntegration(integration), registerWatchChannel(integration)]));
+    const results = await Promise.allSettled(
+      integrations.flatMap((integration) => [syncIntegration(integration), registerWatchChannel(integration)])
+    );
+    for (const result of results) {
+      if (result.status === "rejected") console.error("Initial calendar sync/watch registration failed:", result.reason);
+    }
   });
 
   return NextResponse.json({ integrations: data?.map((i) => ({ id: i.id, google_calendar_id: i.google_calendar_id })) });

@@ -6,6 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
 import { Avatar } from "@/components/ui/Avatar";
+import { useAvatarUrls } from "@/hooks/useAvatarUrls";
 import { cn } from "@/lib/cn";
 import { useSaveChore, useDeleteChore, type ChoreDTO } from "@/hooks/useChores";
 import { useUIStore } from "@/stores/uiStore";
@@ -27,6 +28,7 @@ export function ChoreEditor({ open, onClose, familyId, members, chore }: ChoreEd
   const [scheduleDays, setScheduleDays] = useState<number[]>(chore?.schedule_days ?? []);
   const [assignedMemberIds, setAssignedMemberIds] = useState<string[]>(chore?.assignedMemberIds ?? []);
 
+  const { data: avatarUrls } = useAvatarUrls(members);
   const saveChore = useSaveChore(familyId);
   const deleteChore = useDeleteChore(familyId);
   const pushToast = useUIStore((s) => s.pushToast);
@@ -135,7 +137,7 @@ export function ChoreEditor({ open, onClose, familyId, members, chore }: ChoreEd
           <div className="flex flex-wrap gap-2.5">
             {members.map((m) => (
               <button key={m.id} type="button" onClick={() => toggleMember(m.id)} className="cursor-pointer">
-                <Avatar name={m.name} color={m.color_hex} size={36} ring={assignedMemberIds.includes(m.id) ? "select" : "none"} />
+                <Avatar name={m.name} color={m.color_hex} src={avatarUrls?.[m.id]} size={36} ring={assignedMemberIds.includes(m.id) ? "select" : "none"} />
               </button>
             ))}
           </div>

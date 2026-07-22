@@ -12,6 +12,7 @@ const memberSchema = z.object({
     .string()
     .regex(/^\d{4}$/)
     .optional(),
+  inviteEmail: z.string().trim().toLowerCase().email().optional(),
 });
 
 const bodySchema = z.object({
@@ -35,6 +36,7 @@ export async function POST(req: Request) {
       role: m.role,
       color_hex: m.colorHex,
       pin_hash: m.pin ? await hashPin(m.pin) : null,
+      invite_email: m.inviteEmail ?? null,
       sort_order: i + 1,
     }))
   );

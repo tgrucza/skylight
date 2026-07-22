@@ -2,17 +2,19 @@
 
 import { Star } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
+import { useAvatarUrls } from "@/hooks/useAvatarUrls";
 import type { FamilyMemberDTO } from "@/hooks/useFamily";
 import type { ChoreCompletionDTO } from "@/hooks/useChores";
 
 export function StarTotals({ members, completions }: { members: FamilyMemberDTO[]; completions: ChoreCompletionDTO[] }) {
+  const { data: avatarUrls } = useAvatarUrls(members);
   return (
     <div className="rounded-xl border border-line bg-surface p-5 flex flex-wrap gap-5">
       {members.map((m) => {
         const total = completions.filter((c) => c.member_id === m.id).reduce((sum, c) => sum + c.stars, 0);
         return (
           <div key={m.id} className="flex items-center gap-3">
-            <Avatar name={m.name} color={m.color_hex} size={40} />
+            <Avatar name={m.name} color={m.color_hex} src={avatarUrls?.[m.id]} size={40} />
             <div>
               <div className="font-bold text-sm">{m.name}</div>
               <div className="flex items-center gap-1 text-warning font-bold text-[13px]">

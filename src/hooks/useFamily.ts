@@ -8,6 +8,8 @@ export interface FamilyMemberDTO {
   role: "adult" | "child";
   color_hex: string;
   avatar_url: string | null;
+  birthday: string | null;
+  invite_email: string | null;
   sort_order: number;
 }
 
