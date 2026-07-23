@@ -31,14 +31,10 @@ export function HubListModal({
   const [ensuredId, setEnsuredId] = useState<string | null>(null);
 
   const existing = lists?.find((l) => l.kind === kind) ?? null;
-  const listId = existing?.id ?? ensuredId;
+  const listId = existing?.id ?? (open ? ensuredId : null);
 
   useEffect(() => {
-    if (!open) {
-      setEnsuredId(null);
-      return;
-    }
-    if (!supabase || existing?.id) return;
+    if (!open || !supabase || existing?.id) return;
     let cancelled = false;
     void (async () => {
       try {

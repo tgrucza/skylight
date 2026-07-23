@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentMembership } from "@/lib/family";
 import { decryptToken } from "@/lib/google/tokens";
-import { addGroceryItemsDeduped, ensureChecklistId, ensureGroceryListId, formatIngredientLabel } from "@/lib/groceryList";
+import { addGroceryItemsDeduped, ensureChecklistId, formatIngredientLabel } from "@/lib/groceryList";
 import { zonedIsoDate, zonedDayOfWeek } from "@/lib/dates";
 import { callClaude, type AnthropicToolDef, type AnthropicMessage, type AnthropicContentBlock } from "@/lib/anthropic";
 import { callOpenAiChat, type OpenAiToolDef, type OpenAiMessage, type OpenAiContentPart } from "@/lib/openai";

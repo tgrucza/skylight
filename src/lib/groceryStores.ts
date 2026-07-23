@@ -107,7 +107,7 @@ export function setLastUsedStore(store: string | null | undefined): void {
  * Returns cleaned label + normalized store (null = Any store).
  */
 export function parseGroceryPhrase(raw: string): { label: string; store: string | null } {
-  let text = raw.trim().replace(/^add\s+/i, "").trim();
+  const text = raw.trim().replace(/^add\s+/i, "").trim();
   if (!text) return { label: "", store: null };
 
   for (const name of storeMatchNames()) {

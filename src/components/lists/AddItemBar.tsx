@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -27,15 +27,9 @@ export function AddItemBar({
   knownStores?: string[];
 }) {
   const [value, setValue] = useState("");
-  const [storeValue, setStoreValue] = useState("");
+  const [storeValue, setStoreValue] = useState(() => (showStorePicker ? (getLastUsedStore() ?? "") : ""));
   const [customStore, setCustomStore] = useState("");
   const [showCustom, setShowCustom] = useState(false);
-
-  useEffect(() => {
-    if (!showStorePicker) return;
-    const last = getLastUsedStore();
-    if (last) setStoreValue(last);
-  }, [showStorePicker]);
 
   const options = useMemo(() => storePickerOptions(knownStores), [knownStores]);
 

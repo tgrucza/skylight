@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { LucideIcon } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
@@ -35,29 +35,27 @@ interface QuickAddItemModalProps {
 /** Quick-add a single item to Groceries or the To-Do checklist — Hub "Add grocery" / "Add to do". */
 export function QuickAddItemModal({ open, onClose, icon, title, placeholder, listKind, listName, familyId, memberId }: QuickAddItemModalProps) {
   const [label, setLabel] = useState("");
-  const [storeValue, setStoreValue] = useState("");
+  const [storeValue, setStoreValue] = useState(() => getLastUsedStore() ?? "");
   const [customStore, setCustomStore] = useState("");
   const [showCustom, setShowCustom] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [wasOpen, setWasOpen] = useState(open);
   const supabase = useSupabaseClient();
   const queryClient = useQueryClient();
   const pushToast = useUIStore((s) => s.pushToast);
   const isGrocery = listKind === "grocery";
   const options = useMemo(() => storePickerOptions(), []);
 
-  useEffect(() => {
-    if (!open || !isGrocery) return;
-    const last = getLastUsedStore();
-    if (last) {
-      setStoreValue(last);
-      setShowCustom(false);
-      setCustomStore("");
-    } else {
-      setStoreValue("");
+  // Reset form when the modal opens (React "adjust state when prop changes" pattern).
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) {
+      setLabel("");
+      setStoreValue(isGrocery ? (getLastUsedStore() ?? "") : "");
       setShowCustom(false);
       setCustomStore("");
     }
-  }, [open, isGrocery]);
+  }
 
   function resolveStore(): string | null {
     if (!isGrocery) return null;

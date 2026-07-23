@@ -22,10 +22,6 @@ export function ListItemRow({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!editing) setDraft(item.label);
-  }, [item.label, editing]);
-
-  useEffect(() => {
     if (editing) {
       inputRef.current?.focus();
       inputRef.current?.select();
@@ -77,7 +73,9 @@ export function ListItemRow({
         <button
           type="button"
           onClick={() => {
-            if (onRename) setEditing(true);
+            if (!onRename) return;
+            setDraft(item.label);
+            setEditing(true);
           }}
           className={cn(
             "flex-1 min-w-0 text-left text-[15px] font-medium py-2.5 rounded-sm",
