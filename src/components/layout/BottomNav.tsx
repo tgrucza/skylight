@@ -6,7 +6,7 @@ import { Home, Calendar, CheckCircle2, UtensilsCrossed, ShoppingCart } from "luc
 import { useDeviceMode } from "@/hooks/useDeviceMode";
 import { cn } from "@/lib/cn";
 
-/** Bottom tab bar — mobile single-column layout, per design system §06.6. */
+/** Bottom tab bar — fixed to the phone viewport; hidden from md up (Rail takes over). */
 export function BottomNav() {
   const pathname = usePathname();
   const { homeHref } = useDeviceMode();
@@ -20,22 +20,30 @@ export function BottomNav() {
   ];
 
   return (
-    <nav className="md:hidden flex justify-around rounded-xl bg-ink p-2.5" aria-label="Main">
-      {navItems.map((item) => {
-        const active = item.isHome
-          ? pathname === "/home" || pathname === "/hub"
-          : pathname === item.href || pathname.startsWith(`${item.href}/`);
-        return (
-          <Link
-            key={item.label}
-            href={item.href}
-            className={cn("flex flex-col items-center gap-1 px-3 py-1.5", active ? "text-[#F3ECE0]" : "text-[rgba(243,236,224,0.5)]")}
-          >
-            <item.icon className="size-[22px]" fill={active ? "rgba(201,122,82,0.25)" : "none"} aria-hidden />
-            <span className="text-[10px] font-semibold">{item.label}</span>
-          </Link>
-        );
-      })}
+    <nav
+      className="md:hidden fixed bottom-0 inset-x-0 z-50 border-t border-line/40 bg-ink pb-[env(safe-area-inset-bottom,0px)]"
+      aria-label="Main"
+    >
+      <div className="flex justify-around px-1.5 pt-1.5 pb-1.5 max-w-lg mx-auto">
+        {navItems.map((item) => {
+          const active = item.isHome
+            ? pathname === "/home" || pathname === "/hub"
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              className={cn(
+                "flex flex-col items-center justify-center gap-0.5 min-h-11 min-w-[56px] px-2 rounded-lg transition-colors",
+                active ? "text-[#F3ECE0]" : "text-[rgba(243,236,224,0.5)]"
+              )}
+            >
+              <item.icon className="size-[22px]" fill={active ? "rgba(201,122,82,0.25)" : "none"} aria-hidden />
+              <span className="text-[10px] font-semibold leading-none">{item.label}</span>
+            </Link>
+          );
+        })}
+      </div>
     </nav>
   );
 }

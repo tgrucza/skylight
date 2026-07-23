@@ -213,6 +213,8 @@ export interface Database {
           label: string;
           quantity: string | null;
           category: string | null;
+          /** Grocery store section (e.g. Costco). Null = Any store. Unused for checklists. */
+          store: string | null;
           checked: boolean;
           added_by: string | null;
           sort_order: number;
@@ -269,10 +271,32 @@ export interface Database {
           import_token: string | null;
           latitude: number | null;
           longitude: number | null;
+          walmart_cart_enabled: boolean;
           updated_at: string;
         };
         Insert: Partial<Database["public"]["Tables"]["settings"]["Row"]> & { family_id: string };
         Update: Partial<Database["public"]["Tables"]["settings"]["Row"]>;
+        Relationships: [];
+      };
+      walmart_preferences: {
+        Row: {
+          id: string;
+          family_id: string;
+          list_label: string;
+          preferred_title: string;
+          search_query: string;
+          walmart_url: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["walmart_preferences"]["Row"]> & {
+          family_id: string;
+          list_label: string;
+          preferred_title: string;
+          search_query: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["walmart_preferences"]["Row"]>;
         Relationships: [];
       };
       integration_settings: {

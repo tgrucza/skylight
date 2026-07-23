@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Home, Calendar as CalendarIcon, CheckCircle2, UtensilsCrossed, ShoppingCart, Smartphone, StickyNote } from "lucide-react";
+import { Home, Calendar as CalendarIcon, CheckCircle2, UtensilsCrossed, ShoppingCart, Smartphone, ListChecks } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AvatarStack } from "@/components/ui/Avatar";
@@ -17,6 +17,8 @@ import { TodosWidget } from "@/components/hub/TodosWidget";
 import { MemoriesTile } from "@/components/hub/MemoriesTile";
 import { QuickActions } from "@/components/hub/QuickActions";
 import { QuickAddItemModal } from "@/components/hub/QuickAddItemModal";
+import { HubListModal } from "@/components/hub/HubListModal";
+import { HubChoresModal } from "@/components/hub/HubChoresModal";
 import { IdleScreen } from "@/components/hub/IdleScreen";
 import { HaButtons } from "@/components/hub/HaButtons";
 import { EventEditor } from "@/components/calendar/EventEditor";
@@ -35,7 +37,8 @@ import { useUIStore } from "@/stores/uiStore";
 import { dayRange, weekRange, monthGridRange, zonedDayOfWeek, zonedIsoDate } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 
-type QuickAddKind = "event" | "grocery" | "chore" | "note";
+type QuickAddKind = "event" | "grocery" | "chore" | "todo";
+type WidgetModal = "grocery" | "todo" | "chores" | null;
 
 const NAV_ITEMS = [
   { href: "/hub", icon: Home },
@@ -69,11 +72,13 @@ export default function HubPage() {
 
   const calendarView = useUIStore((s) => s.calendarView);
   const setCalendarView = useUIStore((s) => s.setCalendarView);
+  // Selected day for hub day/month agenda — must not always snap back to "today".
+  const [selectedDay, setSelectedDay] = useState(() => new Date());
   const scheduleRange = useMemo(() => {
-    if (calendarView === "month") return monthGridRange(now, timezone);
+    if (calendarView === "month") return monthGridRange(selectedDay, timezone);
     if (calendarView === "week" || calendarView === "weekend") return weekRange(now, timezone);
-    return dayRange(now, timezone);
-  }, [calendarView, now, timezone]);
+    return dayRange(selectedDay, timezone);
+  }, [calendarView, now, selectedDay, timezone]);
 
   const { data: avatarUrls } = useAvatarUrls(members);
   const { data: events } = useEvents(scheduleRange.start, scheduleRange.end);
@@ -86,6 +91,7 @@ export default function HubPage() {
 
   const [quickAdd, setQuickAdd] = useState<QuickAddKind | null>(null);
   const [quickAddKey, setQuickAddKey] = useState(0);
+  const [widgetModal, setWidgetModal] = useState<WidgetModal>(null);
   const memberId = familyData?.currentMemberId ?? "";
 
   function openQuickAdd(kind: QuickAddKind) {
@@ -178,16 +184,18 @@ export default function HubPage() {
           onChangeView={setCalendarView}
           rangeStart={scheduleRange.start}
           rangeEnd={scheduleRange.end}
+          selectedDay={selectedDay}
+          onSelectDay={setSelectedDay}
         />
         <div className="flex-1 min-h-0 flex flex-col gap-2.5">
           <ThemedFrame className="rounded-lg overflow-hidden">
-            <ChoresMealsWidget chores={chores ?? []} meals={meals} />
+            <ChoresMealsWidget chores={chores ?? []} meals={meals} onOpenChores={() => setWidgetModal("chores")} />
           </ThemedFrame>
-          <ThemedFrame className="rounded-lg overflow-hidden">
-            <GroceriesWidget items={groceries ?? []} />
+          <ThemedFrame className="rounded-lg overflow-hidden relative z-[1]">
+            <GroceriesWidget items={groceries ?? []} onOpen={() => setWidgetModal("grocery")} />
           </ThemedFrame>
-          <ThemedFrame className="rounded-lg overflow-hidden">
-            <TodosWidget items={todos ?? []} />
+          <ThemedFrame className="rounded-lg overflow-hidden relative z-[1]">
+            <TodosWidget items={todos ?? []} onOpen={() => setWidgetModal("todo")} />
           </ThemedFrame>
           <ThemedFrame className="rounded-lg overflow-hidden flex-1 min-h-0">
             <MemoriesTile photoUrl={photos?.[0]?.url} onTap={() => setManualIdle(true)} />
@@ -201,7 +209,7 @@ export default function HubPage() {
             onAddEvent={() => openQuickAdd("event")}
             onAddGrocery={() => openQuickAdd("grocery")}
             onAddChore={() => openQuickAdd("chore")}
-            onAddNote={() => openQuickAdd("note")}
+            onAddTodo={() => openQuickAdd("todo")}
           />
         </ThemedFrame>
         <HaButtons familyId={family?.id} />
@@ -270,16 +278,33 @@ export default function HubPage() {
                 memberId={memberId}
               />
               <QuickAddItemModal
-                key={`note-${quickAddKey}`}
-                open={quickAdd === "note"}
+                key={`todo-${quickAddKey}`}
+                open={quickAdd === "todo"}
                 onClose={() => setQuickAdd(null)}
-                icon={StickyNote}
-                title="Add note"
+                icon={ListChecks}
+                title="Add to do"
                 placeholder="Call the dentist, pack lunches…"
                 listKind="checklist"
                 listName="To-Do"
                 familyId={family.id}
                 memberId={memberId}
+              />
+              <HubListModal
+                key={widgetModal === "todo" ? "todo" : "grocery"}
+                open={widgetModal === "grocery" || widgetModal === "todo"}
+                onClose={() => setWidgetModal(null)}
+                kind={widgetModal === "todo" ? "checklist" : "grocery"}
+                familyId={family.id}
+                memberId={memberId}
+              />
+              <HubChoresModal
+                open={widgetModal === "chores"}
+                onClose={() => setWidgetModal(null)}
+                familyId={family.id}
+                members={members}
+                timezone={timezone}
+                activeMemberId={memberId}
+                isAdult={isAdult}
               />
             </>
           )}

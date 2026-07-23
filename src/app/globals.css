@@ -1,8 +1,9 @@
 @import "tailwindcss";
 
 /*
- * Hearth Design System — tokens
+ * Orbit Design System — tokens
  * Source of truth: design_docs/Hearth Design System.dc.html + Home Hub.dc.html
+ * (design docs keep historical Hearth filenames)
  * Tailwind v4 CSS-first theme: every custom property below is picked up as a
  * utility by the @theme block further down. Never hardcode a hex/px value in
  * component code — add or reuse a token here instead (see §7.3 of the spec).
@@ -587,25 +588,37 @@ html {
 }
 
 body {
+  /* Always keep a solid paper fill. Scene gradients layer on top. */
   background-color: var(--paper);
   background-image: var(--scene-bg);
-  background-attachment: fixed;
+  /* `fixed` frequently fails to paint on iOS Safari and can look like a white screen
+     when seasonal shells also clear `.bg-paper`. Use scroll on touch; fixed on desktop. */
+  background-attachment: scroll;
+  background-repeat: no-repeat;
   background-size: cover;
   color: var(--ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
   min-height: 100vh;
+  min-height: 100dvh;
 }
 
-/* Full-bleed shells let the seasonal scene show through */
+@media (hover: hover) and (pointer: fine) {
+  body {
+    background-attachment: fixed;
+  }
+}
+
+/* Full-bleed shells let the seasonal scene show through — but keep a paper tint
+   so content never sits on a blank browser-white canvas if the scene fails to paint. */
 [data-theme="spring"] .min-h-screen.bg-paper,
 [data-theme="summer"] .min-h-screen.bg-paper,
 [data-theme="fall"] .min-h-screen.bg-paper,
 [data-theme="halloween"] .min-h-screen.bg-paper,
 [data-theme="christmas"] .min-h-screen.bg-paper,
 [data-theme="softball"] .min-h-screen.bg-paper {
-  background-color: transparent !important;
+  background-color: color-mix(in srgb, var(--paper) 88%, transparent) !important;
   background-image: none !important;
 }
 

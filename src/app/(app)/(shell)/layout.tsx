@@ -8,11 +8,11 @@ export default function ShellLayout({ children }: { children: React.ReactNode })
     <div className="relative flex flex-1 flex-col md:flex-row gap-4 max-w-[1160px] w-full mx-auto p-4 md:p-6">
       <ThemeDecor />
       <Rail />
-      <div className="relative z-[1] flex flex-1 flex-col gap-4 min-w-0">
+      <div className="relative z-[1] flex flex-1 flex-col gap-4 min-w-0 pb-[calc(4.75rem+env(safe-area-inset-bottom,0px))] md:pb-0">
         <TopBar />
         <main className="flex-1 min-w-0">{children}</main>
-        <BottomNav />
       </div>
+      <BottomNav />
     </div>
   );
 }

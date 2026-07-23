@@ -2,7 +2,7 @@
 
 import { ChevronDown } from "lucide-react";
 import { withAlpha } from "@/lib/colors";
-import { formatTime, formatWeekdayShort, formatDayNumber, isSameZonedDay, eachZonedDayBetween } from "@/lib/dates";
+import { formatTime, formatWeekdayShort, formatDayNumber, formatDayTitle, isSameZonedDay, eachZonedDayBetween } from "@/lib/dates";
 import { toZonedTime } from "date-fns-tz";
 import { DropdownMenu } from "@/components/ui/Select";
 import { MonthGrid } from "@/components/calendar/MonthGrid";
@@ -18,7 +18,7 @@ const VIEW_LABELS: Record<CalendarViewMode, string> = {
   month: "Month",
 };
 const VIEW_TITLES: Record<CalendarViewMode, string> = {
-  day: "Today's Schedule",
+  day: "Schedule",
   week: "This Week",
   weekend: "This Weekend",
   month: "This Month",
@@ -26,9 +26,9 @@ const VIEW_TITLES: Record<CalendarViewMode, string> = {
 
 /**
  * Hub schedule panel.
- * - day: flat agenda
+ * - day: flat agenda for the selected day
  * - week / weekend: events grouped by day (scrollable list)
- * - month: real calendar grid (weeks × days), not an agenda list
+ * - month: calendar grid with event pills + selected-day agenda (matches /calendar month)
  */
 export function TodayTimeline({
   events,
@@ -39,6 +39,8 @@ export function TodayTimeline({
   onChangeView,
   rangeStart,
   rangeEnd,
+  selectedDay,
+  onSelectDay,
 }: {
   events: EventInstanceDTO[];
   members: FamilyMemberDTO[];
@@ -48,6 +50,8 @@ export function TodayTimeline({
   onChangeView: (mode: CalendarViewMode) => void;
   rangeStart: Date;
   rangeEnd: Date;
+  selectedDay: Date;
+  onSelectDay: (day: Date) => void;
 }) {
   const dropdown = (
     <DropdownMenu
@@ -64,27 +68,41 @@ export function TodayTimeline({
     />
   );
 
+  const dayTitle =
+    viewMode === "day"
+      ? formatDayTitle(selectedDay, timezone)
+      : VIEW_TITLES[viewMode];
+
   return (
     <ThemedFrame className="flex-[1.55] rounded-2xl border border-line bg-surface p-6 flex flex-col overflow-hidden">
-      <div className="flex items-center mb-3">
-        <h2 className="font-bold text-[17px]">{VIEW_TITLES[viewMode]}</h2>
-        <span className="ml-auto">{dropdown}</span>
+      <div className="flex items-center mb-3 gap-2">
+        <h2 className="font-bold text-[17px] truncate">{dayTitle}</h2>
+        <span className="ml-auto shrink-0">{dropdown}</span>
       </div>
 
       <div className="flex-1 overflow-y-auto min-h-0">
         {viewMode === "day" ? (
-          <DayList events={events} members={members} timezone={timezone} now={now} />
+          <DayList events={events} members={members} timezone={timezone} now={now} day={selectedDay} />
         ) : viewMode === "month" ? (
-          <MonthGrid
-            anchor={now}
-            timezone={timezone}
-            events={events}
-            members={members}
-            compact
-            className="border-0 rounded-lg"
-            onSelectEvent={() => onChangeView("day")}
-            onSelectDay={() => onChangeView("day")}
-          />
+          <div className="flex flex-col gap-3 min-h-0">
+            <MonthGrid
+              anchor={selectedDay}
+              timezone={timezone}
+              events={events}
+              members={members}
+              dense
+              selectedDay={selectedDay}
+              className="border-0 rounded-lg"
+              onSelectEvent={(event) => onSelectDay(new Date(event.startsAt))}
+              onSelectDay={onSelectDay}
+            />
+            <div className="border-t border-line pt-3">
+              <div className="font-mono text-[10.5px] tracking-[0.06em] uppercase text-ink-3 mb-1.5">
+                {formatDayTitle(selectedDay, timezone)}
+              </div>
+              <DayList events={events} members={members} timezone={timezone} now={now} day={selectedDay} />
+            </div>
+          </div>
         ) : (
           <GroupedList
             events={events}
@@ -94,6 +112,10 @@ export function TodayTimeline({
             rangeStart={rangeStart}
             rangeEnd={rangeEnd}
             weekendOnly={viewMode === "weekend"}
+            onSelectDay={(day) => {
+              onSelectDay(day);
+              onChangeView("day");
+            }}
           />
         )}
       </div>
@@ -101,12 +123,29 @@ export function TodayTimeline({
   );
 }
 
-function DayList({ events, members, timezone, now }: { events: EventInstanceDTO[]; members: FamilyMemberDTO[]; timezone: string; now: Date }) {
-  const sorted = [...events].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+function DayList({
+  events,
+  members,
+  timezone,
+  now,
+  day,
+}: {
+  events: EventInstanceDTO[];
+  members: FamilyMemberDTO[];
+  timezone: string;
+  now: Date;
+  day: Date;
+}) {
+  const sorted = [...events]
+    .filter((e) => isSameZonedDay(new Date(e.startsAt), day, timezone))
+    .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  const showNow = isSameZonedDay(day, now, timezone);
   const nowIso = now.toISOString();
-  const nowMarkerIndex = sorted.findIndex((e) => e.startsAt > nowIso);
+  const nowMarkerIndex = showNow ? sorted.findIndex((e) => e.startsAt > nowIso) : -2;
 
-  if (sorted.length === 0) return <p className="text-sm text-ink-2 py-8 text-center">Nothing scheduled today — enjoy the quiet.</p>;
+  if (sorted.length === 0) {
+    return <p className="text-sm text-ink-2 py-6 text-center">Nothing scheduled — enjoy the quiet.</p>;
+  }
 
   return (
     <div className="flex flex-col">
@@ -146,6 +185,7 @@ function GroupedList({
   rangeStart,
   rangeEnd,
   weekendOnly,
+  onSelectDay,
 }: {
   events: EventInstanceDTO[];
   members: FamilyMemberDTO[];
@@ -154,6 +194,7 @@ function GroupedList({
   rangeStart: Date;
   rangeEnd: Date;
   weekendOnly: boolean;
+  onSelectDay: (day: Date) => void;
 }) {
   const allDays = eachZonedDayBetween(toZonedTime(rangeStart, timezone), toZonedTime(rangeEnd, timezone));
   const days = weekendOnly ? allDays.filter((d) => d.getDay() === 0 || d.getDay() === 6) : allDays;
@@ -169,10 +210,14 @@ function GroupedList({
         const isToday = isSameZonedDay(day, now, timezone);
         return (
           <div key={day.toISOString()}>
-            <div className={"font-mono text-[10.5px] tracking-[0.06em] uppercase pt-3 pb-1 " + (isToday ? "text-primary" : "text-ink-3")}>
+            <button
+              type="button"
+              onClick={() => onSelectDay(day)}
+              className={"font-mono text-[10.5px] tracking-[0.06em] uppercase pt-3 pb-1 cursor-pointer text-left " + (isToday ? "text-primary" : "text-ink-3")}
+            >
               {formatWeekdayShort(day, timezone)} {formatDayNumber(day, timezone)}
               {isToday ? " · Today" : ""}
-            </div>
+            </button>
             {dayEvents.map((event) => {
               const member = members.find((m) => m.id === event.memberId);
               const color = member?.color_hex ?? "#9C9388";

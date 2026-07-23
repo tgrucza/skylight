@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Pencil } from "lucide-react";
+import { Check, Pencil, Star } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Avatar } from "@/components/ui/Avatar";
 import { useAvatarUrls } from "@/hooks/useAvatarUrls";
@@ -69,6 +69,12 @@ export function ChoreChart({ chores, members, completions, todayIso, todayDow, a
                       {done && <Check className="size-4 text-white" strokeWidth={3.5} />}
                     </span>
                     <span className={cn("font-semibold text-sm", done && "text-ink-3 line-through")}>{chore.title}</span>
+                    {!isAdult && (
+                      <span className={cn("flex items-center gap-0.5 text-warning font-bold text-xs shrink-0", done && "opacity-50")}>
+                        <Star className="size-3 fill-warning" />
+                        {chore.star_value}
+                      </span>
+                    )}
                   </button>
                   {isAdult && (
                     <button

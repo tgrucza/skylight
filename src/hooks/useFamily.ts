@@ -36,7 +36,7 @@ interface FamilyResponse {
 async function fetchFamily(): Promise<FamilyResponse> {
   const res = await fetch("/api/family");
   if (!res.ok) throw new Error("Failed to load family");
-  return res.json();
+  return (await res.json()) as FamilyResponse;
 }
 
 export function useFamily() {

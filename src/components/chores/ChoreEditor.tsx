@@ -5,6 +5,7 @@ import { CheckCircle2, Star, Trash2 } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Button";
 import { Input, Label } from "@/components/ui/Input";
+import { DictationButton } from "@/components/ui/DictationButton";
 import { Avatar } from "@/components/ui/Avatar";
 import { useAvatarUrls } from "@/hooks/useAvatarUrls";
 import { cn } from "@/lib/cn";
@@ -48,7 +49,8 @@ export function ChoreEditor({ open, onClose, familyId, members, chore }: ChoreEd
       return;
     }
     try {
-      await saveChore.mutateAsync({ id: chore?.id, title, starValue, scheduleDays, assignedMemberIds });
+      const stars = Math.min(5, Math.max(1, Math.round(starValue) || 1));
+      await saveChore.mutateAsync({ id: chore?.id, title, starValue: stars, scheduleDays, assignedMemberIds });
       pushToast(chore ? "Chore updated" : "Chore added", "success");
       onClose();
     } catch (err) {
@@ -93,13 +95,22 @@ export function ChoreEditor({ open, onClose, familyId, members, chore }: ChoreEd
       <div className="flex flex-col gap-5">
         <div>
           <Label htmlFor="chore-title">Title</Label>
-          <Input id="chore-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Unload dishwasher" autoFocus />
+          <div className="flex gap-2 items-start">
+            <div className="flex-1 min-w-0">
+              <Input id="chore-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Unload dishwasher" autoFocus />
+            </div>
+            <DictationButton
+              onTranscript={(text) => setTitle((prev) => (prev.trim() ? `${prev.trim()} ${text}` : text))}
+              disabled={busy}
+            />
+          </div>
+          <p className="text-[12px] text-ink-3 mt-2">Type it in, or tap the mic to dictate.</p>
         </div>
 
         <div>
           <Label>Stars</Label>
-          <div className="flex gap-2">
-            {[1, 2, 3].map((n) => (
+          <div className="flex flex-wrap gap-2">
+            {[1, 2, 3, 4, 5].map((n) => (
               <button
                 key={n}
                 type="button"

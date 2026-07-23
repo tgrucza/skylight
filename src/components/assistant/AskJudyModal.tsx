@@ -73,14 +73,15 @@ async function speakReply(text: string, aiSettings: AiSettingsDTO | undefined) {
   window.speechSynthesis.speak(utterance);
 }
 
-async function runClientHaInvokes(
+async function runClientInvokes(
   actions: AssistantResponse["actions"],
   supabase: ReturnType<typeof useSupabaseClient>,
   invoke: ReturnType<typeof useInvokeHaButton>
 ) {
   const ids = actions.map((a) => a.clientInvoke).filter((id): id is string => !!id);
-  if (ids.length === 0 || !supabase) return;
+  if (ids.length === 0) return;
   for (const id of ids) {
+    if (!supabase) continue;
     const { data } = await supabase.from("ha_buttons").select("id, label, icon, entity_id, service, sort_order").eq("id", id).maybeSingle();
     if (data) await invoke.mutateAsync(data as HaButtonDTO);
   }
@@ -248,7 +249,7 @@ function CaptureForJudyModal({ onClose, isAdult }: { onClose: () => void; isAdul
         transcript: note.trim() || undefined,
         image: image ?? undefined,
       });
-      await runClientHaInvokes(res.actions, supabase, invokeHa);
+      await runClientInvokes(res.actions, supabase, invokeHa);
       setResult(res);
       for (const key of QUERY_KEYS_TO_REFRESH) void queryClient.invalidateQueries({ queryKey: [key] });
       if (res.reply) void speakReply(res.reply, aiSettings);
@@ -354,7 +355,7 @@ function ListeningModal({
     const transcript = contextHint ? `[${contextHint}] ${spokenText.trim()}` : spokenText.trim();
     try {
       const res = await ask.mutateAsync(transcript);
-      await runClientHaInvokes(res.actions, supabase, invokeHa);
+      await runClientInvokes(res.actions, supabase, invokeHa);
       setResult(res);
       setPhase("done");
       for (const key of QUERY_KEYS_TO_REFRESH) void queryClient.invalidateQueries({ queryKey: [key] });
@@ -474,7 +475,7 @@ function TypedFallbackModal({
     const transcript = contextHint ? `[${contextHint}] ${text.trim()}` : text.trim();
     try {
       const res = await ask.mutateAsync(transcript);
-      await runClientHaInvokes(res.actions, supabase, invokeHa);
+      await runClientInvokes(res.actions, supabase, invokeHa);
       for (const key of QUERY_KEYS_TO_REFRESH) void queryClient.invalidateQueries({ queryKey: [key] });
       if (res.reply) void speakReply(res.reply, aiSettings);
       onClose();

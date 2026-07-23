@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/EmptyState";
 import { ProfileSwitcher } from "@/components/chores/ProfileSwitcher";
 import { ChoreChart } from "@/components/chores/ChoreChart";
 import { ChoreEditor } from "@/components/chores/ChoreEditor";
+import { KidStarPanel } from "@/components/chores/KidStarPanel";
 import { StarTotals } from "@/components/chores/StarTotal";
 import { RewardShelf } from "@/components/chores/RewardShelf";
 import { useFamily } from "@/hooks/useFamily";
@@ -68,6 +69,18 @@ export default function ChoresPage() {
 
       <ProfileSwitcher members={members} currentUserMemberId={currentUserMemberId} />
 
+      {!isAdult && activeMember && chores && (
+        <KidStarPanel
+          memberName={activeMember.name}
+          chores={chores}
+          completions={weekCompletions ?? []}
+          todayIso={todayIso}
+          todayDow={todayDow}
+          memberId={activeMemberId}
+          allTimeCompletions={allTimeCompletions ?? []}
+        />
+      )}
+
       {!chores || chores.length === 0 ? (
         <EmptyState
           icon={CheckCircle2}
@@ -90,12 +103,18 @@ export default function ChoresPage() {
         />
       )}
 
-      <StarTotals members={members} completions={weekCompletions ?? []} />
+      {!isAdult && <StarTotals members={members} completions={weekCompletions ?? []} />}
 
       {family && activeMemberId && (
         <div>
           <h2 className="font-serif text-2xl mb-3">Rewards</h2>
-          <RewardShelf familyId={family.id} activeMemberId={activeMemberId} isAdult={isAdult} allTimeCompletions={allTimeCompletions ?? []} />
+          <RewardShelf
+            familyId={family.id}
+            activeMemberId={activeMemberId}
+            isAdult={isAdult}
+            showKidStars={!isAdult}
+            allTimeCompletions={allTimeCompletions ?? []}
+          />
         </div>
       )}
 

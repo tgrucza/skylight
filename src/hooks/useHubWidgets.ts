@@ -67,12 +67,13 @@ export function useGroceryPreview(familyId: string | undefined) {
       if (!list) return [];
       const { data: items } = await supabase!
         .from("list_items")
-        .select("label")
+        .select("label, store")
         .eq("list_id", list.id)
         .eq("checked", false)
         .order("sort_order")
         .limit(6);
-      return (items ?? []).map((i) => i.label);
+      // Mixed preview across stores; prefix store when set.
+      return (items ?? []).map((i) => (i.store?.trim() ? `${i.store.trim()} · ${i.label}` : i.label));
     },
   });
 }

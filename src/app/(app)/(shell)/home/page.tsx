@@ -9,6 +9,7 @@ import {
   ShoppingCart,
   Monitor,
   Plus,
+  ListChecks,
 } from "lucide-react";
 import { AskJudyButton, VoiceAssistantModal, CaptureForJudyButton } from "@/components/assistant/AskJudyModal";
 import { HaButtons } from "@/components/hub/HaButtons";
@@ -21,7 +22,7 @@ import { useLists, useAddListItem } from "@/hooks/useLists";
 import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { useClock } from "@/hooks/useClock";
 import { EventRemindersBootstrap } from "@/hooks/useEnsureEventReminders";
-import { ensureGroceryListId } from "@/lib/groceryList";
+import { ensureChecklistId, ensureGroceryListId } from "@/lib/groceryList";
 import { zonedDayOfWeek, zonedIsoDate } from "@/lib/dates";
 import { cn } from "@/lib/cn";
 import { useQueryClient } from "@tanstack/react-query";
@@ -54,30 +55,52 @@ export default function PhoneHomePage() {
   const { data: groceries } = useGroceryPreview(family?.id);
   const { data: lists } = useLists(family?.id);
   const groceryList = lists?.find((l) => l.kind === "grocery");
-  const addItem = useAddListItem(groceryList?.id);
+  const todoList = lists?.find((l) => l.kind === "checklist");
+  const addGrocery = useAddListItem(groceryList?.id);
+  const addTodo = useAddListItem(todoList?.id);
   const supabase = useSupabaseClient();
   const queryClient = useQueryClient();
   const pushToast = useUIStore((s) => s.pushToast);
 
-  const [quickItem, setQuickItem] = useState("");
+  const [quickGrocery, setQuickGrocery] = useState("");
+  const [quickTodo, setQuickTodo] = useState("");
   const [voiceHint, setVoiceHint] = useState<string | null>(null);
-  const [adding, setAdding] = useState(false);
+  const [addingGrocery, setAddingGrocery] = useState(false);
+  const [addingTodo, setAddingTodo] = useState(false);
 
-  async function handleQuickAdd() {
-    if (!quickItem.trim() || !family?.id || !memberId || !supabase) return;
-    const label = quickItem.trim();
-    setAdding(true);
+  async function handleQuickGrocery() {
+    if (!quickGrocery.trim() || !family?.id || !memberId || !supabase) return;
+    const label = quickGrocery.trim();
+    setAddingGrocery(true);
     try {
       const listId = groceryList?.id ?? (await ensureGroceryListId(supabase, family.id));
       if (!groceryList?.id) {
         void queryClient.invalidateQueries({ queryKey: ["lists", family.id] });
       }
-      await addItem.mutateAsync({ label, addedBy: memberId, autoCategory: true, listId });
-      setQuickItem("");
+      await addGrocery.mutateAsync({ label, addedBy: memberId, autoCategory: true, listId });
+      setQuickGrocery("");
     } catch (err) {
       pushToast(err instanceof Error ? err.message : "Couldn't add item", "danger");
     } finally {
-      setAdding(false);
+      setAddingGrocery(false);
+    }
+  }
+
+  async function handleQuickTodo() {
+    if (!quickTodo.trim() || !family?.id || !memberId || !supabase) return;
+    const label = quickTodo.trim();
+    setAddingTodo(true);
+    try {
+      const listId = todoList?.id ?? (await ensureChecklistId(supabase, family.id));
+      if (!todoList?.id) {
+        void queryClient.invalidateQueries({ queryKey: ["lists", family.id] });
+      }
+      await addTodo.mutateAsync({ label, addedBy: memberId, autoCategory: false, listId });
+      setQuickTodo("");
+    } catch (err) {
+      pushToast(err instanceof Error ? err.message : "Couldn't add to-do", "danger");
+    } finally {
+      setAddingTodo(false);
     }
   }
 
@@ -93,81 +116,127 @@ export default function PhoneHomePage() {
   const groceryLabels = groceries ?? [];
 
   return (
-    <div className="flex flex-col gap-5 max-w-lg mx-auto w-full pb-2">
+    <div className="flex flex-col gap-5 max-w-lg mx-auto w-full">
       <EventRemindersBootstrap />
 
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-mono uppercase tracking-[0.08em] text-ink-3">Orbit</p>
-          <h1 className="font-serif text-3xl mt-1">{greetingForHour(hour)}</h1>
-          <p className="text-sm text-ink-2 mt-1">Quick add from your phone — the wall hub stays on /hub.</p>
+      <header className="flex items-start justify-between gap-3 pt-0.5">
+        <div className="min-w-0">
+          <p className="text-[11px] font-mono uppercase tracking-[0.1em] text-ink-3">Orbit</p>
+          <h1 className="font-serif text-[2rem] leading-tight mt-1 tracking-tight">{greetingForHour(hour)}</h1>
+          <p className="text-sm text-ink-2 mt-1.5 leading-snug">Capture groceries and to-dos — the wall hub stays on /hub.</p>
         </div>
         <div className="flex flex-col gap-2 items-end shrink-0">
           <AskJudyButton isAdult={isAdult} />
           <CaptureForJudyButton isAdult={isAdult} />
         </div>
-      </div>
+      </header>
 
-      <section className="rounded-xl border border-line bg-surface p-4 flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="font-bold text-sm">Add to groceries</h2>
-          <Link href="/lists" className="text-xs font-semibold text-primary">
+      <section className="rounded-2xl border border-line bg-surface p-4 flex flex-col gap-3 shadow-[var(--shadow-e1)]">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="size-4 text-primary" aria-hidden />
+            <h2 className="font-bold text-sm">Groceries</h2>
+          </div>
+          <Link href="/lists" className="text-xs font-semibold text-primary min-h-9 inline-flex items-center">
             Open list
           </Link>
         </div>
         <div className="flex gap-2">
           <Input
-            value={quickItem}
-            onChange={(e) => setQuickItem(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && void handleQuickAdd()}
-            placeholder="Milk, buns, salsa…"
+            value={quickGrocery}
+            onChange={(e) => setQuickGrocery(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && void handleQuickGrocery()}
+            placeholder="Milk from Costco…"
+            className="min-h-12 text-base"
+            enterKeyHint="done"
+            autoCapitalize="sentences"
+            autoComplete="off"
           />
           <Button
-            onClick={() => void handleQuickAdd()}
-            loading={adding || addItem.isPending}
-            className="gap-1.5 shrink-0"
-            disabled={!family?.id || !memberId}
+            onClick={() => void handleQuickGrocery()}
+            loading={addingGrocery || addGrocery.isPending}
+            className="gap-1.5 shrink-0 min-h-12 px-4"
+            disabled={!family?.id || !memberId || !quickGrocery.trim()}
           >
             <Plus className="size-4" />
             Add
           </Button>
         </div>
         {groceryLabels.length > 0 && (
-          <p className="text-xs text-ink-3">
+          <p className="text-xs text-ink-3 leading-relaxed">
             {groceryLabels.length} open — {groceryLabels.slice(0, 3).join(", ")}
             {groceryLabels.length > 3 ? "…" : ""}
           </p>
         )}
       </section>
 
+      <section className="rounded-2xl border border-line bg-surface p-4 flex flex-col gap-3 shadow-[var(--shadow-e1)]">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <ListChecks className="size-4 text-primary" aria-hidden />
+            <h2 className="font-bold text-sm">To-dos</h2>
+          </div>
+          <Link href="/lists" className="text-xs font-semibold text-primary min-h-9 inline-flex items-center">
+            Open list
+          </Link>
+        </div>
+        <div className="flex gap-2">
+          <Input
+            value={quickTodo}
+            onChange={(e) => setQuickTodo(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && void handleQuickTodo()}
+            placeholder="Call dentist, pack lunches…"
+            className="min-h-12 text-base"
+            enterKeyHint="done"
+            autoCapitalize="sentences"
+            autoComplete="off"
+          />
+          <Button
+            onClick={() => void handleQuickTodo()}
+            loading={addingTodo || addTodo.isPending}
+            className="gap-1.5 shrink-0 min-h-12 px-4"
+            disabled={!family?.id || !memberId || !quickTodo.trim()}
+          >
+            <Plus className="size-4" />
+            Add
+          </Button>
+        </div>
+      </section>
+
       <section className="grid grid-cols-2 gap-2.5">
         <button
           type="button"
           onClick={() => setVoiceHint("The user wants to plan dinner tonight. If they name a meal, add its typical ingredients to groceries.")}
-          className="rounded-xl border border-line bg-surface p-4 text-left cursor-pointer hover:bg-surface-2/50 min-h-[88px]"
+          className="rounded-2xl border border-line bg-surface p-4 text-left cursor-pointer hover:bg-surface-2/50 active:scale-[0.98] transition-transform min-h-[96px]"
         >
-          <UtensilsCrossed className="size-5 text-primary mb-2" />
+          <UtensilsCrossed className="size-5 text-primary mb-2.5" />
           <div className="font-bold text-sm">Plan dinner</div>
           <div className="text-xs text-ink-3 mt-0.5 truncate">{dinner || "Ask Judy"}</div>
         </button>
         <button
           type="button"
-          onClick={() => setVoiceHint("The user wants to add item(s) to the grocery list.")}
-          className="rounded-xl border border-line bg-surface p-4 text-left cursor-pointer hover:bg-surface-2/50 min-h-[88px]"
+          onClick={() => setVoiceHint("The user wants to add item(s) to the grocery list. If they name a store (Costco, Sam's Club, Aldi, etc.), put items in that store section.")}
+          className="rounded-2xl border border-line bg-surface p-4 text-left cursor-pointer hover:bg-surface-2/50 active:scale-[0.98] transition-transform min-h-[96px]"
         >
-          <ShoppingCart className="size-5 text-primary mb-2" />
-          <div className="font-bold text-sm">Groceries</div>
-          <div className="text-xs text-ink-3 mt-0.5">Voice add</div>
+          <ShoppingCart className="size-5 text-primary mb-2.5" />
+          <div className="font-bold text-sm">Voice add</div>
+          <div className="text-xs text-ink-3 mt-0.5">Groceries by voice</div>
         </button>
-        <Link href="/chores" className="rounded-xl border border-line bg-surface p-4 hover:bg-surface-2/50 min-h-[88px]">
-          <CheckCircle2 className="size-5 text-primary mb-2" />
+        <Link
+          href="/chores"
+          className="rounded-2xl border border-line bg-surface p-4 hover:bg-surface-2/50 active:scale-[0.98] transition-transform min-h-[96px]"
+        >
+          <CheckCircle2 className="size-5 text-primary mb-2.5" />
           <div className="font-bold text-sm">Chores</div>
           <div className="text-xs text-ink-3 mt-0.5">{chores?.length ?? 0} today</div>
         </Link>
-        <Link href="/calendar" className="rounded-xl border border-line bg-surface p-4 hover:bg-surface-2/50 min-h-[88px]">
-          <CalendarIcon className="size-5 text-primary mb-2" />
+        <Link
+          href="/calendar"
+          className="rounded-2xl border border-line bg-surface p-4 hover:bg-surface-2/50 active:scale-[0.98] transition-transform min-h-[96px]"
+        >
+          <CalendarIcon className="size-5 text-primary mb-2.5" />
           <div className="font-bold text-sm">Calendar</div>
-          <div className="text-xs text-ink-3 mt-0.5">Day view</div>
+          <div className="text-xs text-ink-3 mt-0.5">Month + day</div>
         </Link>
       </section>
 
@@ -176,13 +245,13 @@ export default function PhoneHomePage() {
       <Link
         href="/hub"
         className={cn(
-          "flex items-center gap-3 rounded-xl border border-dashed border-line bg-paper px-4 py-3.5 text-sm text-ink-2 hover:bg-surface"
+          "flex items-center gap-3 rounded-2xl border border-dashed border-line bg-paper px-4 py-3.5 text-sm text-ink-2 hover:bg-surface"
         )}
       >
         <Monitor className="size-5 shrink-0" />
         <span>
           <span className="font-semibold text-ink">Open wall hub</span>
-          <span className="block text-xs text-ink-3">Full schedule + idle photos for a mounted tablet</span>
+          <span className="block text-xs text-ink-3 mt-0.5">Full schedule + idle photos for a mounted tablet</span>
         </span>
       </Link>
 

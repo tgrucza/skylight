@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getCurrentMembership } from "@/lib/family";
 import { decryptToken } from "@/lib/google/tokens";
-import { addGroceryItemsDeduped, ensureChecklistId, formatIngredientLabel } from "@/lib/groceryList";
+import { addGroceryItemsDeduped, ensureChecklistId, ensureGroceryListId, formatIngredientLabel } from "@/lib/groceryList";
 import { zonedIsoDate, zonedDayOfWeek } from "@/lib/dates";
 import { callClaude, type AnthropicToolDef, type AnthropicMessage, type AnthropicContentBlock } from "@/lib/anthropic";
 import { callOpenAiChat, type OpenAiToolDef, type OpenAiMessage, type OpenAiContentPart } from "@/lib/openai";
@@ -30,10 +30,17 @@ const TOOLS: AnthropicToolDef[] = [
   },
   {
     name: "add_grocery_items",
-    description: "Add one or more items to the family grocery list (skips duplicates already on the list).",
+    description:
+      "Add one or more items to the family grocery list (skips duplicates already on the list for the same store). Use store when the user names a place like Costco, Sam's Club, Aldi, Walmart, Target.",
     input_schema: {
       type: "object",
-      properties: { items: { type: "array", items: { type: "string" } } },
+      properties: {
+        items: { type: "array", items: { type: "string" }, description: "Item labels; may include phrases like 'milk from Costco'" },
+        store: {
+          type: "string",
+          description: "Optional store section for all items (e.g. Costco, Sam's Club, Aldi). Omit for Any store / General.",
+        },
+      },
       required: ["items"],
     },
   },
@@ -55,7 +62,7 @@ const TOOLS: AnthropicToolDef[] = [
         title: { type: "string" },
         memberNames: { type: "array", items: { type: "string" }, description: "First names to assign this chore to" },
         days: { type: "array", items: { type: "number" }, description: "0=Sun..6=Sat, omit for a one-off/every-day chore" },
-        stars: { type: "number", description: "1-3, defaults to 1" },
+        stars: { type: "number", description: "1-5, defaults to 1" },
       },
       required: ["title", "memberNames"],
     },
@@ -169,17 +176,18 @@ export async function POST(req: NextRequest) {
   const membership = await getCurrentMembership(supabase, session.user.id);
   if (!membership) return NextResponse.json({ error: "No family" }, { status: 404 });
 
-  const [{ data: integration }, { data: family }, { data: members }, { data: recipes }, { data: haButtons }] = await Promise.all([
-    supabase
-      .from("integration_settings")
-      .select("ai_provider, ai_api_key_enc, openai_api_key_enc, ai_model, openai_model, ha_base_url, ha_token_enc")
-      .eq("family_id", membership.familyId)
-      .maybeSingle(),
-    supabase.from("families").select("timezone").eq("id", membership.familyId).single(),
-    supabase.from("family_members").select("id, name").eq("family_id", membership.familyId),
-    supabase.from("recipes").select("id, title, ingredients").eq("family_id", membership.familyId),
-    supabase.from("ha_buttons").select("id, label").eq("family_id", membership.familyId),
-  ]);
+  const [{ data: integration }, { data: family }, { data: members }, { data: recipes }, { data: haButtons }] =
+    await Promise.all([
+      supabase
+        .from("integration_settings")
+        .select("ai_provider, ai_api_key_enc, openai_api_key_enc, ai_model, openai_model, ha_base_url, ha_token_enc")
+        .eq("family_id", membership.familyId)
+        .maybeSingle(),
+      supabase.from("families").select("timezone").eq("id", membership.familyId).single(),
+      supabase.from("family_members").select("id, name").eq("family_id", membership.familyId),
+      supabase.from("recipes").select("id, title, ingredients").eq("family_id", membership.familyId),
+      supabase.from("ha_buttons").select("id, label").eq("family_id", membership.familyId),
+    ]);
 
   const provider = integration?.ai_provider === "openai" ? "openai" : "anthropic";
   const keyEnc = provider === "openai" ? integration?.openai_api_key_enc : integration?.ai_api_key_enc;
@@ -239,6 +247,8 @@ ${eventsSummary || "(nothing scheduled)"}
 Use the tools to make changes; never invent a family member who isn't listed above — ask via the answer tool instead if it's ambiguous. Pick sensible defaults rather than asking clarifying questions when reasonable.
 
 When the user plans a meal like "cheeseburgers tonight" or "taco night": call plan_meal for dinner (today if they said tonight), include typical fixings in ingredients, and set addIngredientsToGroceries true. Prefer matching a saved recipe via recipeTitle when the name is close.
+
+If the user names a grocery store (Costco, Sam's Club, Aldi, Walmart, Target, etc.), pass store on add_grocery_items (or leave store phrases in the item text). Items without a store go under Any store.
 
 If the user sends a photo or document (school supply list, flyer, handwritten note): read it carefully, then use add_grocery_items and/or add_todo (and add_event if dates are clear). Summarize briefly what you captured.
 
@@ -408,11 +418,13 @@ async function executeTool(
       case "add_grocery_items": {
         const items = (input.items as string[] | undefined)?.filter((i) => i.trim()) ?? [];
         if (items.length === 0) throw new Error("No items given");
-        const { added, skipped, labelsAdded } = await addGroceryItemsDeduped(supabase, familyId, items);
+        const store = typeof input.store === "string" ? input.store : null;
+        const { added, skipped, labelsAdded } = await addGroceryItemsDeduped(supabase, familyId, items, null, store);
+        const storeNote = store?.trim() ? ` (${store.trim()})` : "";
         const summary =
           added > 0
-            ? `Added ${labelsAdded.join(", ")} to groceries${skipped ? ` (${skipped} already listed)` : ""}`
-            : `Those were already on the grocery list`;
+            ? `Added ${labelsAdded.join(", ")} to groceries${storeNote}${skipped ? ` (${skipped} already listed)` : ""}`
+            : `Those were already on the grocery list${storeNote}`;
         return { summary, result: summary };
       }
 
@@ -432,7 +444,8 @@ async function executeTool(
         const title = String(input.title ?? "").trim();
         const memberNames = (input.memberNames as string[] | undefined) ?? [];
         const days = (input.days as number[] | undefined) ?? [];
-        const stars = (input.stars as number | undefined) ?? 1;
+        const rawStars = (input.stars as number | undefined) ?? 1;
+        const stars = Math.min(5, Math.max(1, Math.round(Number(rawStars) || 1)));
         const memberIds = memberNames.map((n) => resolveMemberId(n, members)).filter((id): id is string => !!id);
 
         const { data: chore, error } = await supabase

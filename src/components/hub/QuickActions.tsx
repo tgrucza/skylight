@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarPlus, ShoppingCart, CheckCircle2, StickyNote } from "lucide-react";
+import { CalendarPlus, ShoppingCart, CheckCircle2, ListChecks } from "lucide-react";
 
 export interface QuickAction {
   icon: typeof CalendarPlus;
@@ -10,17 +10,17 @@ export interface QuickAction {
   onClick: () => void;
 }
 
-export function QuickActions({ onAddEvent, onAddGrocery, onAddChore, onAddNote }: {
+export function QuickActions({ onAddEvent, onAddGrocery, onAddChore, onAddTodo }: {
   onAddEvent: () => void;
   onAddGrocery: () => void;
   onAddChore: () => void;
-  onAddNote: () => void;
+  onAddTodo: () => void;
 }) {
   const actions: QuickAction[] = [
     { icon: CalendarPlus, label: "Add event", bg: "var(--primary-soft)", fg: "var(--primary)", onClick: onAddEvent },
     { icon: ShoppingCart, label: "Add grocery", bg: "var(--info-soft)", fg: "var(--info)", onClick: onAddGrocery },
     { icon: CheckCircle2, label: "Add chore", bg: "var(--secondary-soft)", fg: "var(--secondary)", onClick: onAddChore },
-    { icon: StickyNote, label: "Add note", bg: "var(--warning-soft)", fg: "var(--warning)", onClick: onAddNote },
+    { icon: ListChecks, label: "Add to do", bg: "var(--warning-soft)", fg: "var(--warning)", onClick: onAddTodo },
   ];
 
   return (

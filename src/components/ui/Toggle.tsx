@@ -43,17 +43,19 @@ export function Checkbox({
   checked,
   onChange,
   label,
+  "aria-label": ariaLabel,
 }: {
   checked: boolean;
   onChange: (next: boolean) => void;
   label?: string;
+  "aria-label"?: string;
 }) {
   return (
     <button
       type="button"
       role="checkbox"
       aria-checked={checked}
-      aria-label={label ? undefined : "Checkbox"}
+      aria-label={label ? undefined : ariaLabel ?? "Checkbox"}
       onClick={() => onChange(!checked)}
       className="inline-flex items-center gap-3 min-h-11 py-2 cursor-pointer"
     >

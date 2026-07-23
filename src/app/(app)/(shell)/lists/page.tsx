@@ -37,16 +37,16 @@ export default function ListsPage() {
   if (familyLoading || isLoading) return <Skeleton rows={4} />;
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 max-w-2xl mx-auto w-full md:max-w-none md:mx-0">
       <div className="flex items-center gap-2 flex-wrap">
-        <h1 className="font-serif text-3xl mr-2">Lists</h1>
-        <div className="flex gap-1 bg-surface-2 rounded-md p-1">
+        <h1 className="font-serif text-[1.75rem] md:text-3xl mr-2 tracking-tight">Lists</h1>
+        <div className="flex gap-1 bg-surface-2 rounded-md p-1 overflow-x-auto max-w-full">
           {(lists ?? []).map((list) => (
             <button
               key={list.id}
               onClick={() => setActiveListId(list.id)}
               className={cn(
-                "px-3.5 py-2 rounded-sm text-[13.5px] font-semibold cursor-pointer",
+                "px-3.5 py-2.5 rounded-sm text-[13.5px] font-semibold cursor-pointer min-h-11 whitespace-nowrap",
                 (activeList?.id ?? "") === list.id ? "bg-surface text-ink shadow-[0_1px_3px_rgba(43,39,35,0.12)]" : "text-ink-3"
               )}
             >
@@ -54,7 +54,7 @@ export default function ListsPage() {
             </button>
           ))}
         </div>
-        <Button variant="outline" size="sm" onClick={() => setNewListOpen(true)} className="gap-1.5">
+        <Button variant="outline" size="sm" onClick={() => setNewListOpen(true)} className="gap-1.5 min-h-11">
           <Plus className="size-4" />
           New list
         </Button>

@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useSupabaseClient } from "./useSupabaseClient";
 import { categorize } from "@/lib/groceryCategories";
+import { normalizeStore, parseGroceryPhrase, setLastUsedStore } from "@/lib/groceryStores";
 import type { ListKind } from "@/types/database";
 
 export interface ListDTO {
@@ -19,8 +20,17 @@ export interface ListItemDTO {
   label: string;
   quantity: string | null;
   category: string | null;
+  /** Grocery store section; null = Any store. Unused for checklists. */
+  store: string | null;
   checked: boolean;
   sort_order: number;
+  created_at: string;
+}
+
+/** Stable display order: sort_order only (never by checked). created_at breaks ties. */
+export function compareListItems(a: ListItemDTO, b: ListItemDTO): number {
+  if (a.sort_order !== b.sort_order) return a.sort_order - b.sort_order;
+  return a.created_at.localeCompare(b.created_at);
 }
 
 export function useLists(familyId: string | undefined) {
@@ -47,10 +57,12 @@ export function useListItems(listId: string | undefined) {
     queryFn: async (): Promise<ListItemDTO[]> => {
       const { data } = await supabase!
         .from("list_items")
-        .select("id, list_id, label, quantity, category, checked, sort_order")
+        .select("id, list_id, label, quantity, category, store, checked, sort_order, created_at")
         .eq("list_id", listId!)
-        .order("sort_order");
-      return data ?? [];
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: true });
+      // Never order/filter by checked — keep positions stable.
+      return [...(data ?? [])].sort(compareListItems);
     },
   });
 
@@ -78,22 +90,36 @@ export function useAddListItem(listId: string | undefined) {
       label,
       addedBy,
       autoCategory,
+      store,
       listId: overrideListId,
     }: {
       label: string;
       addedBy: string;
       autoCategory: boolean;
+      /** Grocery store section; null/omit = Any store. Ignored when autoCategory is false. */
+      store?: string | null;
       /** When creating a grocery list on first add, pass the new id here. */
       listId?: string;
     }) => {
       const id = overrideListId ?? listId;
       if (!supabase || !id) throw new Error("Not ready");
+
+      let finalLabel = label.trim();
+      let finalStore: string | null = null;
+      if (autoCategory) {
+        const parsed = parseGroceryPhrase(finalLabel);
+        finalLabel = parsed.label;
+        finalStore = normalizeStore(store) ?? parsed.store;
+        setLastUsedStore(finalStore);
+      }
+
       const { count } = await supabase.from("list_items").select("id", { count: "exact", head: true }).eq("list_id", id);
       const { error } = await supabase.from("list_items").insert({
         list_id: id,
-        label,
+        label: finalLabel,
         added_by: addedBy,
-        category: autoCategory ? categorize(label) : null,
+        category: autoCategory ? categorize(finalLabel) : null,
+        store: autoCategory ? finalStore : null,
         sort_order: count ?? 0,
       });
       if (error) throw new Error(error.message);
@@ -116,7 +142,25 @@ export function useToggleListItem(listId: string | undefined) {
       const { error } = await supabase.from("list_items").update({ checked }).eq("id", id);
       if (error) throw new Error(error.message);
     },
-    onSuccess: () => {
+    onMutate: async ({ id, checked }) => {
+      const queryKey = ["list-items", listId] as const;
+      await queryClient.cancelQueries({ queryKey });
+      const previous = queryClient.getQueryData<ListItemDTO[]>(queryKey);
+      // Flip checked in place — do not re-sort or move the row.
+      if (previous) {
+        queryClient.setQueryData<ListItemDTO[]>(
+          queryKey,
+          previous.map((item) => (item.id === id ? { ...item, checked } : item))
+        );
+      }
+      return { previous };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.previous) {
+        queryClient.setQueryData(["list-items", listId], ctx.previous);
+      }
+    },
+    onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["list-items", listId] });
       void queryClient.invalidateQueries({ queryKey: ["hub-groceries"] });
       void queryClient.invalidateQueries({ queryKey: ["hub-todos"] });
@@ -131,6 +175,25 @@ export function useDeleteListItem(listId: string | undefined) {
     mutationFn: async (id: string) => {
       if (!supabase) throw new Error("Not ready");
       const { error } = await supabase.from("list_items").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["list-items", listId] });
+      void queryClient.invalidateQueries({ queryKey: ["hub-groceries"] });
+      void queryClient.invalidateQueries({ queryKey: ["hub-todos"] });
+    },
+  });
+}
+
+export function useRenameListItem(listId: string | undefined) {
+  const supabase = useSupabaseClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, label }: { id: string; label: string }) => {
+      if (!supabase) throw new Error("Not ready");
+      const trimmed = label.trim();
+      if (!trimmed) throw new Error("Label can't be empty");
+      const { error } = await supabase.from("list_items").update({ label: trimmed }).eq("id", id);
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {

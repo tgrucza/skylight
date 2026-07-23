@@ -51,10 +51,45 @@ export function useCreateReward(familyId: string | undefined) {
   return useMutation({
     mutationFn: async (input: { title: string; starCost: number }) => {
       if (!supabase || !familyId) throw new Error("Not ready");
-      const { error } = await supabase.from("rewards").insert({ family_id: familyId, title: input.title, star_cost: input.starCost });
+      const starCost = Math.max(1, Math.round(Number(input.starCost) || 1));
+      const { error } = await supabase.from("rewards").insert({ family_id: familyId, title: input.title.trim(), star_cost: starCost });
       if (error) throw new Error(error.message);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["rewards", familyId] }),
+  });
+}
+
+export function useUpdateReward(familyId: string | undefined) {
+  const supabase = useSupabaseClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: { id: string; title: string; starCost: number }) => {
+      if (!supabase) throw new Error("Not ready");
+      const starCost = Math.max(1, Math.round(Number(input.starCost) || 1));
+      const { error } = await supabase
+        .from("rewards")
+        .update({ title: input.title.trim(), star_cost: starCost })
+        .eq("id", input.id);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["rewards", familyId] }),
+  });
+}
+
+/** Soft-delete: hide from shelf while keeping redemption history. */
+export function useDeleteReward(familyId: string | undefined) {
+  const supabase = useSupabaseClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (rewardId: string) => {
+      if (!supabase) throw new Error("Not ready");
+      const { error } = await supabase.from("rewards").update({ active: false }).eq("id", rewardId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["rewards", familyId] });
+      queryClient.invalidateQueries({ queryKey: ["redemptions", familyId] });
+    },
   });
 }
 
@@ -78,6 +113,19 @@ export function useApproveRedemption(familyId: string | undefined) {
     mutationFn: async ({ redemptionId, approverId }: { redemptionId: string; approverId: string }) => {
       if (!supabase) throw new Error("Not ready");
       const { error } = await supabase.from("reward_redemptions").update({ approved_by: approverId }).eq("id", redemptionId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["redemptions", familyId] }),
+  });
+}
+
+export function useCancelRedemption(familyId: string | undefined) {
+  const supabase = useSupabaseClient();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (redemptionId: string) => {
+      if (!supabase) throw new Error("Not ready");
+      const { error } = await supabase.from("reward_redemptions").delete().eq("id", redemptionId);
       if (error) throw new Error(error.message);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["redemptions", familyId] }),

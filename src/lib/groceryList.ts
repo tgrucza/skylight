@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { categorize } from "@/lib/groceryCategories";
+import { normalizeStore, parseGroceryPhrase, storeDedupeKey } from "@/lib/groceryStores";
 
 type Client = SupabaseClient<Database>;
 
@@ -31,49 +32,82 @@ export async function ensureChecklistId(supabase: Client, familyId: string, name
   return created.id;
 }
 
+export type GroceryItemInput = string | { label: string; store?: string | null };
+
 /**
- * Insert grocery labels, skipping case-insensitive duplicates among unchecked items.
- * Returns how many were added vs skipped.
+ * Insert grocery labels, skipping case-insensitive duplicates among unchecked items
+ * within the same store section (Any store is its own bucket).
+ * Phrase parsing: "milk from Costco" / "Sam's Club: paper towels" when store isn't passed.
  */
 export async function addGroceryItemsDeduped(
   supabase: Client,
   familyId: string,
-  labels: string[],
-  addedBy: string | null = null
+  labels: GroceryItemInput[],
+  addedBy: string | null = null,
+  defaultStore: string | null = null
 ): Promise<{ added: number; skipped: number; labelsAdded: string[] }> {
   const listId = await ensureGroceryListId(supabase, familyId);
-  const normalized = labels.map((l) => l.trim()).filter(Boolean);
-  if (normalized.length === 0) return { added: 0, skipped: 0, labelsAdded: [] };
+  const defaultNorm = normalizeStore(defaultStore);
 
-  const { data: existing } = await supabase.from("list_items").select("label").eq("list_id", listId).eq("checked", false);
-  const existingSet = new Set((existing ?? []).map((i) => i.label.trim().toLowerCase()));
+  const parsed = labels
+    .map((entry) => {
+      if (typeof entry === "string") {
+        const p = parseGroceryPhrase(entry);
+        return {
+          label: p.label.trim(),
+          store: p.store ?? defaultNorm,
+        };
+      }
+      const fromLabel = parseGroceryPhrase(entry.label);
+      return {
+        label: fromLabel.label.trim(),
+        store: normalizeStore(entry.store) ?? fromLabel.store ?? defaultNorm,
+      };
+    })
+    .filter((p) => p.label);
 
-  const toInsert: string[] = [];
+  if (parsed.length === 0) return { added: 0, skipped: 0, labelsAdded: [] };
+
+  const { data: existing } = await supabase
+    .from("list_items")
+    .select("label, store")
+    .eq("list_id", listId)
+    .eq("checked", false);
+
+  const existingSet = new Set(
+    (existing ?? []).map((i) => `${storeDedupeKey(i.store)}::${i.label.trim().toLowerCase()}`)
+  );
+
+  const toInsert: { label: string; store: string | null }[] = [];
   let skipped = 0;
   const seen = new Set<string>();
-  for (const label of normalized) {
-    const key = label.toLowerCase();
+  for (const item of parsed) {
+    const key = `${storeDedupeKey(item.store)}::${item.label.toLowerCase()}`;
     if (existingSet.has(key) || seen.has(key)) {
       skipped += 1;
       continue;
     }
     seen.add(key);
-    toInsert.push(label);
+    toInsert.push({ label: item.label, store: item.store });
   }
 
   if (toInsert.length > 0) {
+    const { count } = await supabase.from("list_items").select("id", { count: "exact", head: true }).eq("list_id", listId);
+    const base = count ?? 0;
     const { error } = await supabase.from("list_items").insert(
-      toInsert.map((label) => ({
+      toInsert.map((item, i) => ({
         list_id: listId,
-        label,
-        category: categorize(label),
+        label: item.label,
+        store: item.store,
+        category: categorize(item.label),
         added_by: addedBy,
+        sort_order: base + i,
       }))
     );
     if (error) throw new Error(error.message);
   }
 
-  return { added: toInsert.length, skipped, labelsAdded: toInsert };
+  return { added: toInsert.length, skipped, labelsAdded: toInsert.map((i) => i.label) };
 }
 
 export function formatIngredientLabel(ing: { name: string; qty?: string | null }): string {
