@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { DEFAULT_MEMBER_COLOR } from "@/lib/colors";
+import { findPendingInvite } from "@/lib/family";
 
 const bodySchema = z.object({
   familyName: z.string().trim().min(1).max(80),
@@ -30,6 +31,20 @@ export async function POST(req: Request) {
   const { data: existing } = await supabaseAdmin().from("family_members").select("id").eq("user_id", session.user.id).limit(1);
   if (existing && existing.length > 0) {
     return NextResponse.json({ error: "You already belong to a family" }, { status: 409 });
+  }
+
+  if (session.user.email) {
+    const pending = await findPendingInvite(session.user.email);
+    if (pending) {
+      return NextResponse.json(
+        {
+          error: `You've been invited to ${pending.familyName}. Use “I was invited” on the previous screen instead of creating a new family.`,
+          pendingInvite: true,
+          familyName: pending.familyName,
+        },
+        { status: 409 }
+      );
+    }
   }
 
   const { data: family, error: familyError } = await supabaseAdmin()

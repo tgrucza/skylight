@@ -21,6 +21,8 @@ export interface FamilySettingsDTO {
   slideshow_interval_seconds: number;
   week_starts_on: number;
   default_hub_view: "busy" | "calm";
+  latitude: number | null;
+  longitude: number | null;
 }
 
 interface FamilyResponse {
@@ -28,6 +30,7 @@ interface FamilyResponse {
   members: FamilyMemberDTO[];
   currentMemberId: string;
   settings: FamilySettingsDTO | null;
+  pendingInvite: { familyName: string } | null;
 }
 
 async function fetchFamily(): Promise<FamilyResponse> {

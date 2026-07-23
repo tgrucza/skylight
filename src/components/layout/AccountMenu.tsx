@@ -24,6 +24,7 @@ export function AccountMenu({ size = 40 }: { size?: number }) {
     <>
       <DropdownMenu
         trigger={<Avatar name={me.name} color={me.color_hex} src={avatarUrls?.[me.id]} size={size} />}
+        align="right"
         items={[
           { label: "My profile", icon: User, onSelect: () => setProfileOpen(true) },
           { label: "Settings", icon: Settings, onSelect: () => router.push("/settings") },

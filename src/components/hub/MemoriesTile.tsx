@@ -5,7 +5,7 @@ export function MemoriesTile({ photoUrl, onTap }: { photoUrl?: string; onTap: ()
     <button
       type="button"
       onClick={onTap}
-      className="flex-1 min-h-16 rounded-lg bg-surface-2 relative overflow-hidden cursor-pointer text-left"
+      className="flex-1 min-h-[120px] w-full rounded-lg bg-surface-2 relative overflow-hidden cursor-pointer text-left"
       style={
         photoUrl
           ? { backgroundImage: `url(${photoUrl})`, backgroundSize: "cover", backgroundPosition: "center" }
@@ -15,8 +15,8 @@ export function MemoriesTile({ photoUrl, onTap }: { photoUrl?: string; onTap: ()
             }
       }
     >
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_40%,rgba(43,39,35,0.55))]" />
-      <span className="absolute bottom-2.5 left-3.5 text-[11.5px] font-semibold text-white">Memories · tap for slideshow</span>
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_30%,rgba(43,39,35,0.55))]" />
+      <span className="absolute bottom-2 left-3 text-[11px] font-semibold text-white">Memories · tap for slideshow</span>
     </button>
   );
 }

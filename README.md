@@ -1,8 +1,8 @@
-# Hearth — Family Command Center
+# Orbit — Family Command Center
 
 The calm center of a busy home: shared calendar (two-way Google sync), chores with star rewards, meal planning, grocery/checklists, photos, and a wall-mounted "Home Hub" dashboard with an idle/ambient photo-frame mode.
 
-Built to `HEARTH_ENGINEERING_SPEC.md` and the accompanying design docs. Next.js 15 (App Router) + TypeScript strict + Tailwind v4 + Supabase (Postgres/RLS/Realtime/Storage) + Auth.js v5 + Google Calendar API.
+Built to `HEARTH_ENGINEERING_SPEC.md` and the accompanying design docs (kept under their original filenames; the app was renamed Hearth → Orbit after they were written). Next.js 15 (App Router) + TypeScript strict + Tailwind v4 + Supabase (Postgres/RLS/Realtime/Storage) + Auth.js v5 + Google Calendar API.
 
 ## Getting started
 

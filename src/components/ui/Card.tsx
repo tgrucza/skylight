@@ -10,8 +10,10 @@ export function Card({ elevated, className, children, ...props }: CardProps) {
   return (
     <div
       className={cn(
-        "rounded-xl border border-line bg-surface p-[22px]",
-        elevated ? "shadow-e3 transition-transform duration-[var(--duration-standard)] hover:-translate-y-[3px]" : "shadow-e1",
+        "hearth-card rounded-xl border border-line bg-surface p-[22px]",
+        elevated
+          ? "shadow-e3 transition-transform duration-[var(--duration-standard)] hover:-translate-y-[3px]"
+          : "shadow-e1",
         className
       )}
       {...props}

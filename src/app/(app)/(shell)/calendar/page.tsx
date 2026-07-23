@@ -10,6 +10,7 @@ import { WeekView } from "@/components/calendar/WeekView";
 import { DayAgenda } from "@/components/calendar/DayAgenda";
 import { MemberFilterBar } from "@/components/calendar/MemberFilterBar";
 import { EventEditor } from "@/components/calendar/EventEditor";
+import { ThemedFrame } from "@/components/hub/ThemedFrame";
 import { useFamily } from "@/hooks/useFamily";
 import { useEvents } from "@/hooks/useEvents";
 import { useUIStore } from "@/stores/uiStore";
@@ -19,6 +20,7 @@ import type { EventInstanceDTO } from "@/types/events";
 const VIEW_TABS = [
   { value: "month", label: "Month" },
   { value: "week", label: "Week" },
+  { value: "weekend", label: "Weekend" },
   { value: "day", label: "Day" },
 ] as const;
 
@@ -39,7 +41,7 @@ export default function CalendarPage() {
 
   const range = useMemo(() => {
     if (calendarView === "month") return monthGridRange(anchor, timezone);
-    if (calendarView === "week") return weekRange(anchor, timezone);
+    if (calendarView === "week" || calendarView === "weekend") return weekRange(anchor, timezone);
     return dayRange(anchor, timezone);
   }, [calendarView, anchor, timezone]);
 
@@ -51,10 +53,10 @@ export default function CalendarPage() {
   }, [events, selectedMemberIds]);
 
   function goPrev() {
-    setAnchor((d) => (calendarView === "month" ? prevMonth(d) : calendarView === "week" ? prevWeek(d) : prevDay(d)));
+    setAnchor((d) => (calendarView === "month" ? prevMonth(d) : calendarView === "week" || calendarView === "weekend" ? prevWeek(d) : prevDay(d)));
   }
   function goNext() {
-    setAnchor((d) => (calendarView === "month" ? nextMonth(d) : calendarView === "week" ? nextWeek(d) : nextDay(d)));
+    setAnchor((d) => (calendarView === "month" ? nextMonth(d) : calendarView === "week" || calendarView === "weekend" ? nextWeek(d) : nextDay(d)));
   }
   function openNew(date?: Date) {
     setEditingEvent(null);
@@ -114,23 +116,36 @@ export default function CalendarPage() {
       ) : (
         <>
           {calendarView === "month" && (
-            <MonthGrid
-              anchor={anchor}
-              timezone={timezone}
-              events={visibleEvents}
-              members={members}
-              onSelectEvent={openEdit}
-              onSelectDay={(day) => {
-                setAnchor(day);
-                setCalendarView("day");
-              }}
-            />
+            <ThemedFrame className="rounded-xl overflow-hidden">
+              <MonthGrid
+                anchor={anchor}
+                timezone={timezone}
+                events={visibleEvents}
+                members={members}
+                onSelectEvent={openEdit}
+                onSelectDay={(day) => {
+                  setAnchor(day);
+                  setCalendarView("day");
+                }}
+              />
+            </ThemedFrame>
           )}
-          {calendarView === "week" && (
-            <WeekView anchor={anchor} timezone={timezone} events={visibleEvents} members={members} onSelectEvent={openEdit} />
+          {(calendarView === "week" || calendarView === "weekend") && (
+            <ThemedFrame className="rounded-xl overflow-hidden">
+              <WeekView
+                anchor={anchor}
+                timezone={timezone}
+                events={visibleEvents}
+                members={members}
+                onSelectEvent={openEdit}
+                weekendOnly={calendarView === "weekend"}
+              />
+            </ThemedFrame>
           )}
           {calendarView === "day" && (
-            <DayAgenda anchor={anchor} timezone={timezone} events={visibleEvents} members={members} onSelectEvent={openEdit} />
+            <ThemedFrame className="rounded-xl overflow-hidden">
+              <DayAgenda anchor={anchor} timezone={timezone} events={visibleEvents} members={members} onSelectEvent={openEdit} />
+            </ThemedFrame>
           )}
         </>
       )}

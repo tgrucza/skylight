@@ -80,7 +80,7 @@ export function LinkCalendarModal({ open, onClose, familyId, memberId }: LinkCal
       onClose={onClose}
       icon={CalendarIcon}
       title="Link your Google Calendars"
-      subtitle="Pick the calendars that should sync into Hearth"
+      subtitle="Pick the calendars that should sync into Orbit"
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={saving}>

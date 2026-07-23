@@ -3,6 +3,7 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { hashPin } from "@/lib/pin";
+import { normalizeEmail } from "@/lib/family";
 
 const memberSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -12,7 +13,12 @@ const memberSchema = z.object({
     .string()
     .regex(/^\d{4}$/)
     .optional(),
-  inviteEmail: z.string().trim().toLowerCase().email().optional(),
+  inviteEmail: z
+    .string()
+    .trim()
+    .email()
+    .transform((v) => normalizeEmail(v))
+    .optional(),
 });
 
 const bodySchema = z.object({

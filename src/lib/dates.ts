@@ -1,4 +1,4 @@
-import { addDays, addMonths, endOfMonth, endOfWeek, isSameDay, startOfMonth, startOfWeek } from "date-fns";
+import { addDays, addMonths, endOfMonth, endOfWeek, isSameDay, startOfDay, startOfMonth, startOfWeek } from "date-fns";
 import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
 
 /**
@@ -9,6 +9,21 @@ import { formatInTimeZone, fromZonedTime, toZonedTime } from "date-fns-tz";
  */
 export function nowInTz(timezone: string): Date {
   return toZonedTime(new Date(), timezone);
+}
+
+/**
+ * Day-of-week (0=Sun..6=Sat) for an instant, in the family's timezone.
+ * Don't compute this via `new Date(isoDateString).getDay()` — date-only ISO
+ * strings parse as UTC midnight, so reading `.getDay()` back in a browser
+ * west of UTC rolls it back to the previous day (see chores schedule bug).
+ */
+export function zonedDayOfWeek(instant: Date, timezone: string): number {
+  return toZonedTime(instant, timezone).getDay();
+}
+
+/** "yyyy-MM-dd" for an instant, in the family's timezone — not `instant.toISOString().slice(0, 10)`, which uses UTC and can land on the wrong calendar day near midnight. */
+export function zonedIsoDate(instant: Date, timezone: string): string {
+  return formatInTimeZone(instant, timezone, "yyyy-MM-dd");
 }
 
 function toRange(zonedStart: Date, zonedEnd: Date, timezone: string) {
@@ -30,7 +45,11 @@ export function weekRange(anchor: Date, timezone: string, weekStartsOn: 0 | 1 = 
 }
 
 export function dayRange(anchor: Date, timezone: string) {
-  const zoned = toZonedTime(anchor, timezone);
+  // startOfDay, not the raw zoned instant — otherwise this is a rolling
+  // 24h-from-now window instead of the calendar day, silently dropping any
+  // event earlier today once it's past that time (e.g. a 1:45pm event is
+  // gone from "today" by 4pm).
+  const zoned = startOfDay(toZonedTime(anchor, timezone));
   return toRange(zoned, addDays(zoned, 1), timezone);
 }
 

@@ -43,6 +43,10 @@ export function ChoreEditor({ open, onClose, familyId, members, chore }: ChoreEd
 
   async function handleSave() {
     if (!title.trim()) return;
+    if (assignedMemberIds.length === 0) {
+      pushToast("Assign the chore to at least one person", "danger");
+      return;
+    }
     try {
       await saveChore.mutateAsync({ id: chore?.id, title, starValue, scheduleDays, assignedMemberIds });
       pushToast(chore ? "Chore updated" : "Chore added", "success");
@@ -141,6 +145,7 @@ export function ChoreEditor({ open, onClose, familyId, members, chore }: ChoreEd
               </button>
             ))}
           </div>
+          <p className="text-xs text-ink-3 mt-1.5">Pick at least one person, or the chore won&apos;t show up anywhere.</p>
         </div>
       </div>
     </Modal>

@@ -74,19 +74,36 @@ export function useAddListItem(listId: string | undefined) {
   const supabase = useSupabaseClient();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ label, addedBy, autoCategory }: { label: string; addedBy: string; autoCategory: boolean }) => {
-      if (!supabase || !listId) throw new Error("Not ready");
-      const { count } = await supabase.from("list_items").select("id", { count: "exact", head: true }).eq("list_id", listId);
+    mutationFn: async ({
+      label,
+      addedBy,
+      autoCategory,
+      listId: overrideListId,
+    }: {
+      label: string;
+      addedBy: string;
+      autoCategory: boolean;
+      /** When creating a grocery list on first add, pass the new id here. */
+      listId?: string;
+    }) => {
+      const id = overrideListId ?? listId;
+      if (!supabase || !id) throw new Error("Not ready");
+      const { count } = await supabase.from("list_items").select("id", { count: "exact", head: true }).eq("list_id", id);
       const { error } = await supabase.from("list_items").insert({
-        list_id: listId,
+        list_id: id,
         label,
         added_by: addedBy,
         category: autoCategory ? categorize(label) : null,
         sort_order: count ?? 0,
       });
       if (error) throw new Error(error.message);
+      return id;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["list-items", listId] }),
+    onSuccess: (id) => {
+      void queryClient.invalidateQueries({ queryKey: ["list-items", id] });
+      void queryClient.invalidateQueries({ queryKey: ["hub-groceries"] });
+      void queryClient.invalidateQueries({ queryKey: ["hub-todos"] });
+    },
   });
 }
 
@@ -99,7 +116,11 @@ export function useToggleListItem(listId: string | undefined) {
       const { error } = await supabase.from("list_items").update({ checked }).eq("id", id);
       if (error) throw new Error(error.message);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["list-items", listId] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["list-items", listId] });
+      void queryClient.invalidateQueries({ queryKey: ["hub-groceries"] });
+      void queryClient.invalidateQueries({ queryKey: ["hub-todos"] });
+    },
   });
 }
 
@@ -112,7 +133,11 @@ export function useDeleteListItem(listId: string | undefined) {
       const { error } = await supabase.from("list_items").delete().eq("id", id);
       if (error) throw new Error(error.message);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["list-items", listId] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["list-items", listId] });
+      void queryClient.invalidateQueries({ queryKey: ["hub-groceries"] });
+      void queryClient.invalidateQueries({ queryKey: ["hub-todos"] });
+    },
   });
 }
 
@@ -122,8 +147,9 @@ export function useCreateList(familyId: string | undefined) {
   return useMutation({
     mutationFn: async ({ name, kind }: { name: string; kind: ListKind }) => {
       if (!supabase || !familyId) throw new Error("Not ready");
-      const { error } = await supabase.from("lists").insert({ family_id: familyId, name, kind });
-      if (error) throw new Error(error.message);
+      const { data, error } = await supabase.from("lists").insert({ family_id: familyId, name, kind }).select("id").single();
+      if (error || !data) throw new Error(error?.message ?? "Couldn't create list");
+      return data.id as string;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["lists", familyId] }),
   });

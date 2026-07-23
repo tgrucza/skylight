@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { getCurrentMembership } from "@/lib/family";
+import { getCurrentMembership, normalizeEmail } from "@/lib/family";
 import { hashPin } from "@/lib/pin";
 import type { Database } from "@/types/database";
 
@@ -19,7 +19,16 @@ const bodySchema = z.object({
     .union([z.string().regex(/^\d{4}$/), z.null()])
     .optional(),
   birthday: z.union([z.string().date(), z.null()]).optional(),
-  inviteEmail: z.union([z.string().trim().toLowerCase().email(), z.null()]).optional(),
+  inviteEmail: z
+    .union([
+      z
+        .string()
+        .trim()
+        .email()
+        .transform((v) => normalizeEmail(v)),
+      z.null(),
+    ])
+    .optional(),
   avatarUrl: z.union([z.string(), z.null()]).optional(),
 });
 

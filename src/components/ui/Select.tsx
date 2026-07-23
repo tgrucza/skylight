@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useOverlayPresence } from "@/stores/uiStore";
 
 function useClickOutside(onOutside: () => void) {
   const ref = useRef<HTMLDivElement>(null);
@@ -34,6 +35,7 @@ export function Select({
 }) {
   const [open, setOpen] = useState(false);
   const ref = useClickOutside(() => setOpen(false));
+  useOverlayPresence(open);
   const current = options.find((o) => o.value === value);
 
   return (
@@ -85,9 +87,19 @@ export interface MenuItem {
   destructive?: boolean;
 }
 
-export function DropdownMenu({ trigger, items }: { trigger: React.ReactNode; items: MenuItem[] }) {
+export function DropdownMenu({
+  trigger,
+  items,
+  align = "left",
+}: {
+  trigger: React.ReactNode;
+  items: MenuItem[];
+  /** Which edge of the trigger the menu hangs from. Use "right" when the trigger sits near the right edge of the screen (e.g. the account menu), so the menu opens leftward instead of bleeding off-window. */
+  align?: "left" | "right";
+}) {
   const [open, setOpen] = useState(false);
   const ref = useClickOutside(() => setOpen(false));
+  useOverlayPresence(open);
 
   return (
     <div className="relative" ref={ref}>
@@ -95,7 +107,13 @@ export function DropdownMenu({ trigger, items }: { trigger: React.ReactNode; ite
         {trigger}
       </button>
       {open && (
-        <div role="menu" className="absolute top-[calc(100%+8px)] left-0 z-20 w-[200px] rounded-2xl border border-line bg-surface p-1.5 shadow-dropdown animate-fade-up">
+        <div
+          role="menu"
+          className={cn(
+            "absolute top-[calc(100%+8px)] z-20 w-[200px] rounded-2xl border border-line bg-surface p-1.5 shadow-dropdown animate-fade-up",
+            align === "right" ? "right-0" : "left-0"
+          )}
+        >
           {items.map((item) => (
             <div
               key={item.label}

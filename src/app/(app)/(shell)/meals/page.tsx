@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { WeekMealGrid } from "@/components/meals/WeekMealGrid";
+import { RecipesPanel } from "@/components/meals/RecipesPanel";
 import { useFamily } from "@/hooks/useFamily";
 import { useMealPlan, useSetMealEntry } from "@/hooks/useMeals";
 import { weekRange, nextWeek, prevWeek, formatMonthTitle } from "@/lib/dates";
@@ -50,6 +51,8 @@ export default function MealsPage() {
       </div>
 
       {familyLoading || isLoading ? <Skeleton rows={4} /> : <WeekMealGrid days={days} timezone={timezone} entries={entries ?? []} onSave={handleSave} />}
+
+      {family?.id && <RecipesPanel familyId={family.id} />}
     </div>
   );
 }

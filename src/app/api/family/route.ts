@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { getCurrentMembership, linkPendingMembership } from "@/lib/family";
+import { findPendingInvite, getCurrentMembership, linkPendingMembership } from "@/lib/family";
 
 /** The signed-in user's family + member roster + settings — used across the app for color-coding, filters, pickers, and /hub idle timing. */
 export async function GET() {
@@ -10,7 +10,7 @@ export async function GET() {
 
   const supabase = await createServerSupabaseClient();
   let membership = await getCurrentMembership(supabase, session.user.id);
-  // Repairs an already-stuck duplicate-family user if a pending invite now matches them (spec §3.2 retrofit).
+  // Repairs a membership-less user if a pending invite now matches them (spec §3.2 retrofit).
   if (!membership && session.user.email) membership = await linkPendingMembership(session.user.id, session.user.email);
   if (!membership) return NextResponse.json({ error: "No family" }, { status: 404 });
 
@@ -24,5 +24,20 @@ export async function GET() {
     supabase.from("settings").select("*").eq("family_id", membership.familyId).maybeSingle(),
   ]);
 
-  return NextResponse.json({ family, members: members ?? [], currentMemberId: membership.memberId, settings });
+  // Surface a recoverable invite when the user is stuck in a different (usually empty) family.
+  let pendingInvite: { familyName: string } | null = null;
+  if (session.user.email) {
+    const pending = await findPendingInvite(session.user.email);
+    if (pending && pending.familyId !== membership.familyId) {
+      pendingInvite = { familyName: pending.familyName };
+    }
+  }
+
+  return NextResponse.json({
+    family,
+    members: members ?? [],
+    currentMemberId: membership.memberId,
+    settings,
+    pendingInvite,
+  });
 }

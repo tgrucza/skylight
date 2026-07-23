@@ -52,7 +52,7 @@ export function IdleScreen({
       />
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(20,17,13,0.05)_0%,rgba(20,17,13,0.15)_55%,rgba(20,17,13,0.72)_100%)]" />
 
-      <span className="absolute top-8.5 left-11 font-mono text-xs tracking-[0.18em] text-[rgba(243,236,224,0.55)]">HEARTH</span>
+      <span className="absolute top-8.5 left-11 font-mono text-xs tracking-[0.18em] text-[rgba(243,236,224,0.55)]">ORBIT</span>
 
       <div className="absolute left-14 bottom-30">
         <div className="flex items-baseline">

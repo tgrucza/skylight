@@ -1,6 +1,7 @@
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { supabaseAdmin } from "@/lib/supabase/admin";
+import { normalizeEmail } from "@/lib/email";
 
 /**
  * Auth.js v5, JWT session strategy — no database adapter, because the schema
@@ -41,11 +42,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     async jwt({ token, account, profile }) {
       if (account && profile?.email) {
+        const email = normalizeEmail(profile.email);
         const { data, error } = await supabaseAdmin()
           .from("users")
           .upsert(
             {
-              email: profile.email,
+              email,
               display_name: profile.name ?? null,
               avatar_url: typeof profile.picture === "string" ? profile.picture : null,
             },

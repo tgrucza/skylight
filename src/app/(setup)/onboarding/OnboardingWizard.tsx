@@ -40,11 +40,16 @@ function newDraftMember(colorIndex: number): DraftMember {
   };
 }
 
-export function OnboardingWizard() {
+export function OnboardingWizard({ signedInEmail }: { signedInEmail: string }) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [joinBusy, setJoinBusy] = useState(false);
+  const [joinMessage, setJoinMessage] = useState<string | null>(null);
+  const [transferPrompt, setTransferPrompt] = useState<{ invitedFamilyName: string; currentFamilyName: string } | null>(
+    null
+  );
 
   // Step 1 — family + the signing-in adult
   const [familyName, setFamilyName] = useState("");
@@ -82,6 +87,37 @@ export function OnboardingWizard() {
       });
   }, [step, calendars]);
 
+  async function tryJoinExisting(confirmTransfer = false) {
+    setJoinMessage(null);
+    setError(null);
+    setJoinBusy(true);
+    try {
+      const res = await fetch("/api/family/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmTransfer }),
+      });
+      const data = await res.json();
+      if (data.status === "confirm_transfer") {
+        setTransferPrompt({
+          invitedFamilyName: data.invitedFamilyName,
+          currentFamilyName: data.currentFamilyName,
+        });
+        return;
+      }
+      if (!res.ok) {
+        setJoinMessage(data.error ?? "No matching invite found yet.");
+        return;
+      }
+      router.push("/hub");
+      router.refresh();
+    } catch {
+      setJoinMessage("Couldn't check for an invite. Try again in a moment.");
+    } finally {
+      setJoinBusy(false);
+    }
+  }
+
   async function submitFamily() {
     setError(null);
     if (!familyName.trim() || !myName.trim()) {
@@ -90,6 +126,27 @@ export function OnboardingWizard() {
     }
     setBusy(true);
     try {
+      // Prefer an existing invite over creating a duplicate household.
+      const joinRes = await fetch("/api/family/join", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      const joinData = await joinRes.json();
+      if (joinRes.ok && (joinData.status === "joined" || joinData.status === "already_member")) {
+        router.push("/hub");
+        router.refresh();
+        return;
+      }
+      if (joinData.status === "confirm_transfer") {
+        setTransferPrompt({
+          invitedFamilyName: joinData.invitedFamilyName,
+          currentFamilyName: joinData.currentFamilyName,
+        });
+        setBusy(false);
+        return;
+      }
+
       const res = await fetch("/api/onboarding/family", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -202,53 +259,91 @@ export function OnboardingWizard() {
         )}
 
         {step === 0 && (
-          <div className="rounded-xl border border-line bg-surface p-7">
-            <h1 className="font-serif text-3xl mb-1.5">Name your family</h1>
-            <p className="text-ink-2 text-sm mb-6">This becomes the shared space everyone in your household sees.</p>
-
-            <div className="mb-4">
-              <Label htmlFor="familyName">Family name</Label>
-              <Input id="familyName" value={familyName} onChange={(e) => setFamilyName(e.target.value)} placeholder="The Ramirez Family" />
-            </div>
-
-            <div className="mb-6">
-              <Select
-                label="Timezone"
-                value={timezone}
-                onChange={setTimezone}
-                options={COMMON_TIMEZONES.map((t) => ({ value: t.value, label: t.label }))}
-              />
-            </div>
-
-            <div className="h-px bg-line my-6" />
-
-            <p className="text-ink-2 text-sm mb-4">Now, you — the first adult in the family.</p>
-            <div className="mb-4">
-              <Label htmlFor="myName">Your name</Label>
-              <Input id="myName" value={myName} onChange={(e) => setMyName(e.target.value)} placeholder="Dana" />
-            </div>
-            <div className="mb-6">
-              <Label>Your color</Label>
-              <div className="flex flex-wrap gap-2.5">
-                {MEMBER_COLORS.map((c) => (
-                  <button
-                    key={c.hex}
-                    type="button"
-                    aria-label={c.name}
-                    onClick={() => setMyColor(c.hex)}
-                    className="size-9 rounded-full cursor-pointer"
-                    style={{
-                      background: c.hex,
-                      boxShadow: myColor === c.hex ? `0 0 0 2px var(--surface), 0 0 0 3.5px ${c.hex}` : undefined,
-                    }}
+          <div className="flex flex-col gap-4">
+            <div className="rounded-xl border border-line bg-surface p-7">
+              <h1 className="font-serif text-3xl mb-1.5">Join an existing family?</h1>
+              <p className="text-ink-2 text-sm mb-4">
+                If someone already invited you, use this first — don&apos;t create a second household. Matching uses your
+                signed-in Google email ({signedInEmail}). They must Invite / Add you with that exact address.
+              </p>
+              {joinMessage && (
+                <div className="mb-4">
+                  <Alert tone="info" title="No invite found yet" body={joinMessage} onDismiss={() => setJoinMessage(null)} />
+                </div>
+              )}
+              {transferPrompt && (
+                <div className="mb-4">
+                  <Alert
+                    tone="info"
+                    title={`Join ${transferPrompt.invitedFamilyName}?`}
+                    body={`You're currently alone in ${transferPrompt.currentFamilyName}. Continue to leave that empty family and join the invited one.`}
                   />
-                ))}
-              </div>
+                  <Button
+                    className="w-full mt-3"
+                    loading={joinBusy}
+                    onClick={() => void tryJoinExisting(true)}
+                  >
+                    Join {transferPrompt.invitedFamilyName}
+                  </Button>
+                </div>
+              )}
+              {!transferPrompt && (
+                <Button variant="outline" size="lg" className="w-full" onClick={() => void tryJoinExisting(false)} loading={joinBusy}>
+                  I was invited — check my email
+                </Button>
+              )}
             </div>
 
-            <Button size="lg" className="w-full" onClick={submitFamily} loading={busy}>
-              Continue
-            </Button>
+            <div className="rounded-xl border border-line bg-surface p-7">
+              <h2 className="font-serif text-2xl mb-1.5">Or create a new family</h2>
+              <p className="text-ink-2 text-sm mb-6">
+                Only do this if you&apos;re the first person setting up Orbit for your household.
+              </p>
+
+              <div className="mb-4">
+                <Label htmlFor="familyName">Family name</Label>
+                <Input id="familyName" value={familyName} onChange={(e) => setFamilyName(e.target.value)} placeholder="The Ramirez Family" />
+              </div>
+
+              <div className="mb-6">
+                <Select
+                  label="Timezone"
+                  value={timezone}
+                  onChange={setTimezone}
+                  options={COMMON_TIMEZONES.map((t) => ({ value: t.value, label: t.label }))}
+                />
+              </div>
+
+              <div className="h-px bg-line my-6" />
+
+              <p className="text-ink-2 text-sm mb-4">Now, you — the first adult in the family.</p>
+              <div className="mb-4">
+                <Label htmlFor="myName">Your name</Label>
+                <Input id="myName" value={myName} onChange={(e) => setMyName(e.target.value)} placeholder="Dana" />
+              </div>
+              <div className="mb-6">
+                <Label>Your color</Label>
+                <div className="flex flex-wrap gap-2.5">
+                  {MEMBER_COLORS.map((c) => (
+                    <button
+                      key={c.hex}
+                      type="button"
+                      aria-label={c.name}
+                      onClick={() => setMyColor(c.hex)}
+                      className="size-9 rounded-full cursor-pointer"
+                      style={{
+                        background: c.hex,
+                        boxShadow: myColor === c.hex ? `0 0 0 2px var(--surface), 0 0 0 3.5px ${c.hex}` : undefined,
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <Button size="lg" className="w-full" onClick={submitFamily} loading={busy} disabled={joinBusy}>
+                Create family
+              </Button>
+            </div>
           </div>
         )}
 
@@ -353,7 +448,7 @@ export function OnboardingWizard() {
           <div className="rounded-xl border border-line bg-surface p-7">
             <h1 className="font-serif text-3xl mb-1.5">Link your calendars</h1>
             <p className="text-ink-2 text-sm mb-6">
-              Pick the Google calendars that should sync into Hearth. You can change this later from Family settings.
+              Pick the Google calendars that should sync into Orbit. You can change this later from Family settings.
             </p>
 
             {calendarsLoading && (

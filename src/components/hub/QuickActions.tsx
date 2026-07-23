@@ -24,13 +24,13 @@ export function QuickActions({ onAddEvent, onAddGrocery, onAddChore, onAddNote }
   ];
 
   return (
-    <div className="flex gap-3">
+    <div className="quick-actions flex gap-3">
       {actions.map((action) => (
         <button
           key={action.label}
           type="button"
           onClick={action.onClick}
-          className="flex-1 flex items-center gap-3 rounded-lg border border-line bg-surface px-4.5 py-3.5 cursor-pointer hover:bg-surface-2/50"
+          className="quick-action-btn flex-1 flex items-center gap-3 rounded-lg border border-line bg-surface px-4.5 py-3.5 cursor-pointer hover:bg-surface-2/50"
         >
           <span className="flex items-center justify-center size-9.5 rounded-[11px] shrink-0" style={{ background: action.bg, color: action.fg }}>
             <action.icon className="size-[19px]" />

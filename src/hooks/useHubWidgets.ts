@@ -11,20 +11,19 @@ export interface ChoreToday {
 }
 
 /** Today's chores across the whole family, for the Hub's compact ChoresWidget — full per-member chore management lands in M4. */
-export function useChoresToday(familyId: string | undefined, todayIso: string) {
+export function useChoresToday(familyId: string | undefined, todayIso: string, todayDow: number) {
   const supabase = useSupabaseClient();
   return useQuery({
     queryKey: ["hub-chores-today", familyId, todayIso],
     enabled: !!supabase && !!familyId,
     queryFn: async (): Promise<ChoreToday[]> => {
-      const dow = new Date(todayIso).getDay();
       const { data: chores } = await supabase!
         .from("chores")
         .select("id, title, icon, schedule_days, active")
         .eq("family_id", familyId!)
         .eq("active", true);
 
-      const todays = (chores ?? []).filter((c) => c.schedule_days.length === 0 || c.schedule_days.includes(dow));
+      const todays = (chores ?? []).filter((c) => c.schedule_days.length === 0 || c.schedule_days.includes(todayDow));
       if (todays.length === 0) return [];
 
       const { data: completions } = await supabase!
@@ -73,6 +72,33 @@ export function useGroceryPreview(familyId: string | undefined) {
         .eq("checked", false)
         .order("sort_order")
         .limit(6);
+      return (items ?? []).map((i) => i.label);
+    },
+  });
+}
+
+/** Unchecked items from the family's checklist (To-Do / notes) list — Hub landing preview. */
+export function useTodoPreview(familyId: string | undefined) {
+  const supabase = useSupabaseClient();
+  return useQuery({
+    queryKey: ["hub-todos", familyId],
+    enabled: !!supabase && !!familyId,
+    queryFn: async (): Promise<string[]> => {
+      const { data: list } = await supabase!
+        .from("lists")
+        .select("id")
+        .eq("family_id", familyId!)
+        .eq("kind", "checklist")
+        .limit(1)
+        .maybeSingle();
+      if (!list) return [];
+      const { data: items } = await supabase!
+        .from("list_items")
+        .select("label")
+        .eq("list_id", list.id)
+        .eq("checked", false)
+        .order("sort_order")
+        .limit(5);
       return (items ?? []).map((i) => i.label);
     },
   });

@@ -13,11 +13,7 @@ import { RewardShelf } from "@/components/chores/RewardShelf";
 import { useFamily } from "@/hooks/useFamily";
 import { useChores, useChoreCompletions, useToggleChoreCompletion, type ChoreDTO } from "@/hooks/useChores";
 import { useWallProfileStore } from "@/stores/wallProfileStore";
-import { weekRange } from "@/lib/dates";
-
-function toIsoDate(d: Date) {
-  return d.toISOString().slice(0, 10);
-}
+import { weekRange, zonedDayOfWeek, zonedIsoDate } from "@/lib/dates";
 
 export default function ChoresPage() {
   const { data: familyData, isLoading: familyLoading } = useFamily();
@@ -35,9 +31,10 @@ export default function ChoresPage() {
 
   // Computed once per mount (not on every render) to satisfy React's purity rule around Date.now()/new Date().
   const [now] = useState(() => new Date());
-  const todayIso = useMemo(() => toIsoDate(now), [now]);
-  const weekStartIso = useMemo(() => toIsoDate(weekRange(now, timezone).start), [now, timezone]);
-  const yearAgoIso = useMemo(() => toIsoDate(new Date(now.getTime() - 365 * 86400000)), [now]);
+  const todayIso = useMemo(() => zonedIsoDate(now, timezone), [now, timezone]);
+  const todayDow = useMemo(() => zonedDayOfWeek(now, timezone), [now, timezone]);
+  const weekStartIso = useMemo(() => zonedIsoDate(weekRange(now, timezone).start, timezone), [now, timezone]);
+  const yearAgoIso = useMemo(() => zonedIsoDate(new Date(now.getTime() - 365 * 86400000), timezone), [now, timezone]);
 
   const { data: chores, isLoading: choresLoading } = useChores(family?.id);
   const { data: weekCompletions } = useChoreCompletions(family?.id, weekStartIso, todayIso);
@@ -85,6 +82,7 @@ export default function ChoresPage() {
           members={members}
           completions={weekCompletions ?? []}
           todayIso={todayIso}
+          todayDow={todayDow}
           activeMemberId={activeMemberId}
           isAdult={isAdult}
           onToggle={(choreId, memberId, done, stars) => toggleCompletion.mutate({ choreId, memberId, dateIso: todayIso, done, stars })}

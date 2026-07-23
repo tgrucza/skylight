@@ -280,6 +280,11 @@ export interface Database {
           family_id: string;
           ai_provider: "anthropic" | "openai" | null;
           ai_api_key_enc: string | null;
+          openai_api_key_enc: string | null;
+          ai_model: string | null;
+          openai_model: string | null;
+          voice_provider: "browser" | "openai";
+          voice_name: string | null;
           ha_base_url: string | null;
           ha_token_enc: string | null;
           updated_at: string;

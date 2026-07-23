@@ -22,23 +22,30 @@ export function WeekView({
   events,
   members,
   onSelectEvent,
+  weekendOnly = false,
 }: {
   anchor: Date;
   timezone: string;
   events: EventInstanceDTO[];
   members: FamilyMemberDTO[];
   onSelectEvent: (event: EventInstanceDTO) => void;
+  /** Show just Saturday + Sunday from this same week — same data, no separate fetch (spec §4). */
+  weekendOnly?: boolean;
 }) {
-  const { start } = weekRange(anchor, timezone);
-  const days = Array.from({ length: 7 }, (_, i) => new Date(start.getTime() + i * 86400000));
+  // Monday-start so Sat/Sun land as the last two, adjacent days of the week —
+  // a Sunday-start week puts them 6 days apart (bookends), not a weekend pair.
+  const { start } = weekRange(anchor, timezone, weekendOnly ? 1 : 0);
+  const allDays = Array.from({ length: 7 }, (_, i) => new Date(start.getTime() + i * 86400000));
+  const days = weekendOnly ? allDays.slice(5) : allDays;
   const hours = Array.from({ length: END_HOUR - START_HOUR }, (_, i) => START_HOUR + i);
   const today = new Date();
   const nowOffset = minutesFromGridStart(today, timezone) * (HOUR_HEIGHT / 60);
   const showNow = nowOffset >= 0 && nowOffset <= (END_HOUR - START_HOUR) * HOUR_HEIGHT;
+  const gridColsClass = weekendOnly ? "grid-cols-[56px_repeat(2,1fr)]" : "grid-cols-[56px_repeat(7,1fr)]";
 
   return (
     <div className="rounded-xl border border-line bg-surface overflow-hidden">
-      <div className="grid grid-cols-[56px_repeat(7,1fr)] border-b border-line">
+      <div className={`grid ${gridColsClass} border-b border-line`}>
         <div />
         {days.map((day) => {
           const isToday = isSameZonedDay(day, today, timezone);
@@ -58,7 +65,7 @@ export function WeekView({
         })}
       </div>
 
-      <div className="grid grid-cols-[56px_repeat(7,1fr)] relative max-h-[70vh] overflow-y-auto">
+      <div className={`grid ${gridColsClass} relative max-h-[70vh] overflow-y-auto`}>
         <div>
           {hours.map((h) => (
             <div key={h} style={{ height: HOUR_HEIGHT }} className="text-right pr-2 -translate-y-2 font-mono text-[10px] text-ink-3">

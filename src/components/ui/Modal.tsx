@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, type LucideIcon } from "lucide-react";
 import { useHasMounted } from "@/hooks/useHasMounted";
+import { useOverlayPresence } from "@/stores/uiStore";
 
 export interface ModalProps {
   open: boolean;
@@ -17,6 +18,7 @@ export interface ModalProps {
 
 export function Modal({ open, onClose, icon: Icon, title, subtitle, children, footer }: ModalProps) {
   const mounted = useHasMounted();
+  useOverlayPresence(open);
 
   useEffect(() => {
     if (!open) return;

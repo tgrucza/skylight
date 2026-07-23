@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Users, Trash2, Calendar as CalendarIcon, X } from "lucide-react";
+import { Plus, Users, Trash2, Calendar as CalendarIcon, X, Mail } from "lucide-react";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Card } from "@/components/ui/Card";
 import { Avatar } from "@/components/ui/Avatar";
@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
 import { Input, Label } from "@/components/ui/Input";
+import { Alert } from "@/components/ui/Alert";
 import { LinkCalendarModal } from "@/components/family/LinkCalendarModal";
 import { EditMemberModal } from "@/components/family/EditMemberModal";
 import { MEMBER_COLORS } from "@/lib/colors";
@@ -69,10 +70,17 @@ export default function FamilyPage() {
       });
       const body = await res.json();
       if (!res.ok) throw new Error(body.error ?? "Couldn't add member");
-      pushToast(`${name} added to the family`, "success");
+      const invited = role === "adult" && inviteEmail.trim();
+      pushToast(
+        invited
+          ? `${name} added — they'll join this family when they sign in with ${inviteEmail.trim().toLowerCase()}`
+          : `${name} added to the family`,
+        "success"
+      );
       void queryClient.invalidateQueries({ queryKey: ["family"] });
       setModalOpen(false);
       setName("");
+      setRole("child");
       setPin("");
       setInviteEmail("");
     } catch (err) {
@@ -95,6 +103,9 @@ export default function FamilyPage() {
 
   if (isLoading) return <Skeleton rows={4} />;
 
+  const hasPendingAdultInvite = (data?.members ?? []).some((m) => m.role === "adult" && m.invite_email);
+  const adultCount = (data?.members ?? []).filter((m) => m.role === "adult").length;
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex items-center gap-3">
@@ -102,15 +113,32 @@ export default function FamilyPage() {
         {isAdult && (
           <Button onClick={() => setModalOpen(true)} className="ml-auto gap-2">
             <Plus className="size-[18px]" strokeWidth={2.5} />
-            Add member
+            Invite / Add
           </Button>
         )}
       </div>
+
+      {isAdult && adultCount < 2 && (
+        <Alert
+          tone="info"
+          title="Invite another adult"
+          body="Add them with their Gmail as the invite email. They sign in with that Google account and join this family — they should not create a new one. There is no share link; matching is by email only."
+        />
+      )}
+
+      {isAdult && hasPendingAdultInvite && adultCount >= 2 && (
+        <Alert
+          tone="info"
+          title="Invite pending"
+          body="They join this family automatically when they sign in with the Google account that matches the invite email. No share link is sent."
+        />
+      )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
         {(data?.members ?? []).map((m) => {
           const isSelf = m.id === data?.currentMemberId;
           const memberIntegrations = (integrations ?? []).filter((i) => i.member_id === m.id);
+          const pendingInvite = m.invite_email;
 
           return (
             <Card
@@ -134,6 +162,12 @@ export default function FamilyPage() {
               <Avatar name={m.name} color={m.color_hex} src={avatarUrls?.[m.id]} size={56} />
               <div className="font-bold text-sm">{m.name}</div>
               <Badge tone={m.role === "adult" ? "info" : "neutral"}>{m.role === "adult" ? "Adult" : "Child"}</Badge>
+              {pendingInvite && (
+                <div className="flex items-center gap-1 text-[11px] text-ink-3 leading-snug px-1">
+                  <Mail className="size-3 shrink-0" />
+                  <span className="truncate">Waiting for {pendingInvite}</span>
+                </div>
+              )}
 
               {m.role === "adult" && (
                 <div
@@ -177,14 +211,14 @@ export default function FamilyPage() {
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         icon={Users}
-        title="Add a family member"
+        title="Invite / add a family member"
         footer={
           <>
             <Button variant="ghost" onClick={() => setModalOpen(false)} disabled={busy}>
               Cancel
             </Button>
             <Button onClick={handleAdd} loading={busy}>
-              Add
+              {role === "adult" ? "Invite" : "Add"}
             </Button>
           </>
         }
@@ -237,8 +271,8 @@ export default function FamilyPage() {
             </div>
           )}
           {role === "adult" && (
-            <div>
-              <Label htmlFor="member-invite">Their Google email (optional — links them in when they sign in)</Label>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="member-invite">Their Google / Gmail address</Label>
               <Input
                 id="member-invite"
                 type="email"
@@ -246,6 +280,11 @@ export default function FamilyPage() {
                 onChange={(e) => setInviteEmail(e.target.value)}
                 placeholder="name@gmail.com"
               />
+              <p className="text-xs text-ink-3 leading-snug">
+                Enter the email they use to sign in with Google. When they sign in on this app with that account, they
+                join <span className="font-semibold text-ink-2">this</span> family — they should not create a new one.
+                There is no invite link or email sent; matching is by address only.
+              </p>
             </div>
           )}
         </div>
@@ -277,7 +316,7 @@ export default function FamilyPage() {
         }
       >
         <p className="text-sm text-ink-2">
-          {removeTarget?.name} will lose access to Hearth and their linked calendar (if any) will be unlinked.
+          {removeTarget?.name} will lose access to Orbit and their linked calendar (if any) will be unlinked.
         </p>
       </Modal>
 

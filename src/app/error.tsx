@@ -14,7 +14,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
       <div className="w-full max-w-[420px] flex flex-col items-center gap-5">
         <ErrorState title="Something went wrong" body="An unexpected error happened. Try again, or head back to the hub." onRetry={reset} />
         <Link href="/hub" className="text-sm font-semibold text-primary underline underline-offset-2">
-          Back to Hearth
+          Back to Orbit
         </Link>
       </div>
     </div>

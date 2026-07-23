@@ -12,6 +12,8 @@ interface ChoreChartProps {
   members: FamilyMemberDTO[];
   completions: ChoreCompletionDTO[];
   todayIso: string;
+  /** Day-of-week (0=Sun..6=Sat) in the family's timezone — compute via `zonedDayOfWeek`, not `new Date(todayIso).getDay()` (see lib/dates.ts). */
+  todayDow: number;
   activeMemberId: string;
   isAdult: boolean;
   onToggle: (choreId: string, memberId: string, done: boolean, stars: number) => void;
@@ -19,9 +21,8 @@ interface ChoreChartProps {
 }
 
 /** Today's chore chart, grouped by assigned member — tap a chip to complete (spec §6.6). */
-export function ChoreChart({ chores, members, completions, todayIso, activeMemberId, isAdult, onToggle, onEdit }: ChoreChartProps) {
+export function ChoreChart({ chores, members, completions, todayIso, todayDow, activeMemberId, isAdult, onToggle, onEdit }: ChoreChartProps) {
   const { data: avatarUrls } = useAvatarUrls(members);
-  const todayDow = new Date(todayIso).getDay();
   const dueToday = chores.filter((c) => c.schedule_days.length === 0 || c.schedule_days.includes(todayDow));
 
   if (dueToday.length === 0) {

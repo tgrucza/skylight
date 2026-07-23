@@ -108,7 +108,10 @@ export function useSaveChore(familyId: string | undefined) {
       }
       return choreId;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["chores", familyId] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["chores", familyId] });
+      void queryClient.invalidateQueries({ queryKey: ["hub-chores-today"] });
+    },
   });
 }
 
@@ -121,7 +124,10 @@ export function useDeleteChore(familyId: string | undefined) {
       const { error } = await supabase.from("chores").update({ active: false }).eq("id", choreId);
       if (error) throw new Error(error.message);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["chores", familyId] }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["chores", familyId] });
+      void queryClient.invalidateQueries({ queryKey: ["hub-chores-today"] });
+    },
   });
 }
 

@@ -196,9 +196,9 @@ export function EditMemberModal({
           </div>
         )}
 
-        {role === "adult" && !member.invite_email && !isSelf && (
-          <div>
-            <Label htmlFor="edit-member-invite">Their Google email (to link when they sign in)</Label>
+        {role === "adult" && !isSelf && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="edit-member-invite">Invite email (their Google / Gmail)</Label>
             <Input
               id="edit-member-invite"
               type="email"
@@ -206,10 +206,12 @@ export function EditMemberModal({
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder="name@gmail.com"
             />
+            <p className="text-xs text-ink-3 leading-snug">
+              {member.invite_email
+                ? "Waiting for them to sign in with this Google account — they'll join this family automatically. No share link is sent."
+                : "They join this family when they sign in with that Google account. No share link is sent; matching is by email only."}
+            </p>
           </div>
-        )}
-        {role === "adult" && member.invite_email && (
-          <p className="text-xs text-ink-3">Waiting for {member.invite_email} to sign in and link this profile.</p>
         )}
       </div>
     </Modal>

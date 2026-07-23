@@ -48,7 +48,7 @@ export default function StyleGuidePage() {
   return (
     <main className="max-w-[1160px] mx-auto px-10 py-16">
       <div className="mb-12">
-        <div className="font-mono text-xs uppercase tracking-[0.16em] text-primary mb-3">Hearth Design System</div>
+        <div className="font-mono text-xs uppercase tracking-[0.16em] text-primary mb-3">Orbit Design System</div>
         <h1 className="font-serif text-5xl mb-3">Component library</h1>
         <p className="text-ink-2 max-w-[60ch]">Every ui/ primitive, live — for visually diffing against the design doc.</p>
       </div>

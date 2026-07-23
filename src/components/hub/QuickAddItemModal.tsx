@@ -8,6 +8,8 @@ import { Input, Label } from "@/components/ui/Input";
 import { useSupabaseClient } from "@/hooks/useSupabaseClient";
 import { useQueryClient } from "@tanstack/react-query";
 import { useUIStore } from "@/stores/uiStore";
+import { ensureChecklistId, ensureGroceryListId } from "@/lib/groceryList";
+import { categorize } from "@/lib/groceryCategories";
 
 interface QuickAddItemModalProps {
   open: boolean;
@@ -21,7 +23,7 @@ interface QuickAddItemModalProps {
   memberId: string;
 }
 
-/** Quick-add a single item to the family's Groceries or To-Do list — used by the Hub's "Add grocery" / "Add note" quick actions. Full list management lands in M5. */
+/** Quick-add a single item to Groceries or the To-Do checklist — Hub "Add grocery" / "Add note". */
 export function QuickAddItemModal({ open, onClose, icon, title, placeholder, listKind, listName, familyId, memberId }: QuickAddItemModalProps) {
   const [label, setLabel] = useState("");
   const [busy, setBusy] = useState(false);
@@ -33,17 +35,24 @@ export function QuickAddItemModal({ open, onClose, icon, title, placeholder, lis
     if (!label.trim() || !supabase) return;
     setBusy(true);
     try {
-      let { data: list } = await supabase.from("lists").select("id").eq("family_id", familyId).eq("kind", listKind).limit(1).maybeSingle();
-      if (!list) {
-        const { data: created, error } = await supabase.from("lists").insert({ family_id: familyId, name: listName, kind: listKind }).select("id").single();
-        if (error || !created) throw new Error(error?.message ?? "Couldn't create list");
-        list = created;
-      }
-      const { error } = await supabase.from("list_items").insert({ list_id: list.id, label: label.trim(), added_by: memberId });
+      const listId =
+        listKind === "grocery"
+          ? await ensureGroceryListId(supabase, familyId)
+          : await ensureChecklistId(supabase, familyId, listName);
+      const trimmed = label.trim();
+      const { error } = await supabase.from("list_items").insert({
+        list_id: listId,
+        label: trimmed,
+        added_by: memberId,
+        category: listKind === "grocery" ? categorize(trimmed) : null,
+      });
       if (error) throw new Error(error.message);
 
       pushToast(`Added to ${listName}`, "success");
+      void queryClient.invalidateQueries({ queryKey: ["lists", familyId] });
+      void queryClient.invalidateQueries({ queryKey: ["list-items", listId] });
       void queryClient.invalidateQueries({ queryKey: ["hub-groceries"] });
+      void queryClient.invalidateQueries({ queryKey: ["hub-todos"] });
       setLabel("");
       onClose();
     } catch (err) {
