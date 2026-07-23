@@ -16,11 +16,15 @@ export default async function SignInPage({ searchParams }: { searchParams: Promi
   return (
     <div className="min-h-screen flex items-center justify-center bg-paper px-6">
       <div className="w-full max-w-[420px] text-center">
-        <div className="mx-auto mb-8 flex size-[88px] items-center justify-center rounded-3xl bg-primary shadow-[0_8px_24px_rgba(43,39,35,0.14)]">
-          <div className="size-[34px] rounded-full border-[5px] border-white relative" aria-hidden />
-        </div>
+        <div
+          className="mx-auto mb-8 size-[88px] rounded-3xl shadow-[0_8px_24px_rgba(43,39,35,0.14)] bg-cover bg-center"
+          style={{ backgroundImage: "url(/icons/icon-192.png)" }}
+          role="img"
+          aria-label="Orbit"
+        />
         <div className="font-mono text-xs uppercase tracking-[0.16em] text-primary mb-4">Family Command Center</div>
-        <h1 className="font-serif text-[44px] leading-[1.05] mb-4">The calm center of a busy home.</h1>
+        <h1 className="font-serif text-[44px] leading-[1.05] mb-3">Orbit</h1>
+        <p className="font-serif text-[22px] leading-snug text-ink-2 mb-4">The calm center of a busy home.</p>
         <p className="text-ink-2 mb-10 leading-relaxed">
           Sign in with Google to set up your family&apos;s schedules, chores, meals, and lists — all in one warm, shared screen.
         </p>

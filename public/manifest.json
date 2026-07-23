@@ -1,13 +1,16 @@
 {
+  "id": "/",
   "name": "Orbit — Family Command Center",
   "short_name": "Orbit",
   "description": "The calm center of a busy home: schedules, chores, meals, lists, and photos, shared by everyone.",
   "start_url": "/hub",
   "scope": "/",
   "display": "standalone",
-  "orientation": "landscape-primary",
+  "orientation": "any",
   "background_color": "#F5F1EA",
   "theme_color": "#BF6544",
+  "categories": ["lifestyle", "productivity"],
+  "lang": "en",
   "icons": [
     { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "/icons/icon-256.png", "sizes": "256x256", "type": "image/png", "purpose": "any" },

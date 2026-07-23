@@ -115,7 +115,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       return NextResponse.json({ error: err instanceof Error ? err.message : "Failed to update Google Calendar" }, { status: 502 });
     }
   } else if (!existing.google_event_id && existing.member_id) {
-    // Event wasn't linked to Google before (member had no integration at creation time); nothing to do — stays Hearth-only.
+    // Event wasn't linked to Google before (member had no integration at creation time); nothing to do — stays Orbit-only (source remains "hearth" in DB).
   }
 
   const { data: updated, error } = await supabase.from("events").update(nextValues).eq("id", rowId).select("*").single();
