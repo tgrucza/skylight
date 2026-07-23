@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { newsreader, hanken, jetbrainsMono } from "@/lib/fonts";
 import { QueryProvider } from "@/components/providers/QueryProvider";
-import { ServiceWorkerGuard } from "@/components/providers/ServiceWorkerGuard";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { ToastStack } from "@/components/ui/Toast";
 import "./globals.css";
@@ -42,7 +41,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       className={`${newsreader.variable} ${hanken.variable} ${jetbrainsMono.variable} h-full`}
     >
       <body className="min-h-full flex flex-col font-sans antialiased bg-paper text-ink">
-        <ServiceWorkerGuard />
         <QueryProvider>
           <ThemeProvider>
             {children}
