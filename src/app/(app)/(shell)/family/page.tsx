@@ -50,6 +50,10 @@ export default function FamilyPage() {
       pushToast("PIN must be exactly 4 digits", "danger");
       return;
     }
+    if (role === "adult" && !inviteEmail.trim()) {
+      pushToast("Enter their Google / Gmail address so they can join this family", "danger");
+      return;
+    }
     setBusy(true);
     try {
       const res = await fetch("/api/onboarding/members", {
@@ -281,9 +285,9 @@ export default function FamilyPage() {
                 placeholder="name@gmail.com"
               />
               <p className="text-xs text-ink-3 leading-snug">
-                Enter the email they use to sign in with Google. When they sign in on this app with that account, they
-                join <span className="font-semibold text-ink-2">this</span> family — they should not create a new one.
-                There is no invite link or email sent; matching is by address only.
+                Required for adults. Enter the exact Gmail they use to sign in with Google. When they open Orbit with
+                that account, they join <span className="font-semibold text-ink-2">this</span> family — tell them not to
+                create a new one. No invite link is emailed; matching is by address only.
               </p>
             </div>
           )}
